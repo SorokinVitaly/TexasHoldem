@@ -113,7 +113,7 @@ class MainViewModel @Inject constructor(
         repeat(4) { index ->
             if (player(index).isActive) {
                 delay(300L)
-                _state.update { it.payToBank(index, ANTE_BET) }
+                _state.update { it.payToBank(index, SMALL_BLIND) }
             }
         }
     }

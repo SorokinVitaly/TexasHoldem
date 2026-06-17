@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Bank(
                         bankChips = state.bankChips,
+                        communityCards = state.communityCards,
                         modifier = Modifier.constrainAs(createRef()) { centerTo(parent) }
                     )
                     state.players.forEachIndexed { i, player ->
@@ -86,15 +87,9 @@ class MainActivity : ComponentActivity() {
                             !player.isInGame -> false
                             else -> state.isCardsOpen
                         }
-                        fun onCardClick(card: Card) {
-                            if (state.isDrawEnabled && i == 0) {
-                                viewModel.onCardClick(card)
-                            }
-                        }
                         Player(
                             playerData = player,
                             isCardsOpen = isCardsOpen,
-                            onCardClick = ::onCardClick,
                             modifier = Modifier.constrainAs(
                                 createRef(),
                                 playerConstraint(i)
@@ -120,7 +115,7 @@ class MainActivity : ComponentActivity() {
         if (state.isActionAvailable) {
             if (state.actionsAvailable.isNotEmpty()) {
                 state.actionsAvailable.forEach { action ->
-                    AppButton(action.name) { viewModel.onAction(action) }
+                    AppButton(action.name) //{ viewModel.onAction(action) }
                 }
             } else {
                 if (state.isDealAvailable) {

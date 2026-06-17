@@ -4,13 +4,11 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,7 +36,6 @@ import coil.compose.AsyncImage
 fun Player(
     playerData: PlayerData,
     isCardsOpen: Boolean,
-    onCardClick: (Card) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (!playerData.isActive) {
@@ -57,23 +54,7 @@ fun Player(
 
         Spacer(Modifier.height(8.dp))
 
-        Box {
-            playerData.cards.forEachIndexed { index, card ->
-                val isSelected = card in playerData.selectedCards
-                Box(modifier = Modifier
-                    .padding(start = (index * 20).dp)
-                    .offset(y = if (isSelected) (-10).dp else 0.dp)
-                    .animateContentSize()
-                ) {
-                    Card(
-                        card = card,
-                        isCardsOpen = isCardsOpen,
-                        isSelected = isSelected,
-                        onClick = { onCardClick(card) }
-                    )
-                }
-            }
-        }
+        Cards(playerData.cards, isCardsOpen)
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (playerData.isDialer) {
@@ -96,25 +77,26 @@ fun Player(
 }
 
 @Composable
-fun Card(
-    card: Card,
-    isCardsOpen: Boolean,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val assetName = if (isCardsOpen) card.faceAssetName else card.backAssetName
-    val borderColor = if (isSelected) Color.Yellow else Color.Black
-    val borderWidth = if (isSelected) 2.dp else 1.dp
+fun Cards(cards: List<Card>, isCardsOpen: Boolean) =
+    Box {
+        cards.forEachIndexed { index, card ->
+            Box(modifier = Modifier
+                .padding(start = (index * 20).dp)
+                .animateContentSize()
+            ) {
+                Card(card, isCardsOpen)
+            }
+        }
+    }
 
+@Composable
+fun Card(card: Card, isCardsOpen: Boolean) {
+    val assetName = if (isCardsOpen) card.faceAssetName else card.backAssetName
     Card(
-        border = BorderStroke(width = borderWidth, color = borderColor),
+        border = BorderStroke(width = 1.dp, color = Color.Black),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(4.dp),
-        modifier = modifier
-            .height(cardHeight)
-            .width(cardWidth)
-            .clickable(onClick = onClick)
+        modifier = Modifier.height(cardHeight).width(cardWidth)
     ) {
         val imageLoader = (LocalContext.current.applicationContext as MainApp).imageLoader
         AsyncImage(
@@ -169,12 +151,18 @@ fun ChipIcon() {
 @Composable
 fun Bank(
     bankChips: Int,
+    communityCards: List<Card>,
     modifier: Modifier = Modifier
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
+        if (communityCards.isEmpty()) {
+            Spacer(Modifier.height(cardHeight))
+        } else {
+            Cards(communityCards, true)
+        }
         Text(
             text = "Bank",
             style = MaterialTheme.typography.titleMedium,

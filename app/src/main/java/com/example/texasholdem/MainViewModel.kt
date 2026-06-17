@@ -26,16 +26,17 @@ class MainViewModel @Inject constructor(
     val events = _events.asSharedFlow()
 
     enum class RoundType {
-        PRE_DRAW,
-        DRAW,
-        POST_DRAW
+        PRE_FLOP,
+        FLOP,
+        TURN,
+        RIVER
     }
 
     private val deck = mutableListOf<Card>()
     private var currentBet = 0
     private var numOfRaise = 0
     private var playerIndex = 0
-    private var round = RoundType.PRE_DRAW
+    private var round = RoundType.PRE_FLOP
     private val combinations = arrayOfNulls<DrawCombination?>(4)
 
     init {
@@ -66,37 +67,16 @@ class MainViewModel @Inject constructor(
             _state.update { it.updatePlayer(dealerIndex) { setDialer() } }
             newDeck()
             dealingCards()
-            payAnte()
+            payBlinds()
             currentBet = 0
             numOfRaise = 0
             playerIndex = dealerIndex
-            round = RoundType.PRE_DRAW
+            round = RoundType.PRE_FLOP
             history.clear()
-            mainGameLoop()
+            //mainGameLoop()
         }
     }
 
-    fun onAction(action: ActionType) {
-        viewModelScope.launch {
-            _state.update { it.copy(isActionAvailable = false, isDrawEnabled = false) }
-            applyAction(0, action)
-            mainGameLoop()
-        }
-    }
-
-    fun onCardClick(card: Card) {
-        _state.update {
-            it.updatePlayer(0) {
-                copy(
-                    selectedCards = if (card in selectedCards) {
-                        selectedCards - card
-                    } else {
-                        selectedCards + card
-                    }
-                )
-            }
-        }
-    }
 
     private fun newDeck() {
         deck.clear()
@@ -106,7 +86,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun dealingCards() {
         _state.update { it.updateAllPlayers { clearCards() } }
-        repeat(5) {
+        repeat(2) {
             repeat(4) { index ->
                 if (player(index).isActive) {
                     delay(300L)
@@ -118,19 +98,49 @@ class MainViewModel @Inject constructor(
         delay(500L)
         _state.update { it.updateAllPlayers { sortCards() } }
 
-        repeat(4) { index ->
+        /*repeat(4) { index ->
             if (player(index).isActive) {
                 combinations[index] = calcPreDrawCombination(history, player(index).cards)
             }
-        }
+        }*/
     }
 
-    private suspend fun payAnte() {
+    private suspend fun payBlinds() {
+        val dealerIndex = nextInGameIndex(localData.dealerIndex)
+        playerIndex = dealerIndex
+
+
         repeat(4) { index ->
             if (player(index).isActive) {
                 delay(300L)
                 _state.update { it.payToBank(index, ANTE_BET) }
             }
+        }
+    }
+
+    private fun nextInGameIndex(index: Int): Int {
+        val first = (index + 1) and 3
+        var current = first
+
+        while (true) {
+            if (player(current).isInGame) {
+                return current
+            }
+            current = (current + 1) and 3
+            if (current == first) {
+                throw IllegalStateException("Next player not found")
+            }
+        }
+    }
+
+    private fun player(index: Int) = _state.value.players[index]
+
+    /*
+    fun onAction(action: ActionType) {
+        viewModelScope.launch {
+            _state.update { it.copy(isActionAvailable = false, isDrawEnabled = false) }
+            applyAction(0, action)
+            mainGameLoop()
         }
     }
 
@@ -274,21 +284,6 @@ class MainViewModel @Inject constructor(
         ) }
     }
 
-    private fun nextInGameIndex(index: Int): Int {
-        val first = (index + 1) and 3
-        var current = first
-
-        while (true) {
-            if (player(current).isInGame) {
-                return current
-            }
-            current = (current + 1) and 3
-            if (current == first) {
-                throw IllegalStateException("Next player not found")
-            }
-        }
-    }
-
     private fun availableActions(playerIndex: Int): List<ActionType> {
         if (round == RoundType.DRAW) {
             return listOf(ActionType.Draw())
@@ -384,16 +379,14 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun player(index: Int) = _state.value.players[index]
-
+*/
     private fun log(mess: String) = Log.e("GamePlay", mess)
 
     companion object {
-        const val ANTE_BET = 1
-        const val PRE_DRAW_BET = 1
-        const val PRE_DRAW_RAISE = 1
-        const val POST_DRAW_BET = 2
-        const val POST_DRAW_RAISE = 2
+        const val SMALL_BLIND = 1
+        const val BIG_BLIND = 2
+        const val SMALL_BET = 2
+        const val BIG_BET = 4
         const val MAX_NUM_OF_RAISE = 3
 
         val drawOdds = mapOf(

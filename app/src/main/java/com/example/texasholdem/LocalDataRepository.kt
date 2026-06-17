@@ -111,7 +111,6 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
             players = players,
             actionsAvailable = emptyList(),
             bankChips = 0,
-            isDrawEnabled = false,
             isActionAvailable = true,
             isDealAvailable = ScreenState.isDealAvailable(players),
             isResetAvailable = !isJustReset,

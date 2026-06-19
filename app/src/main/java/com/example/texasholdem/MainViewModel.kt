@@ -160,6 +160,12 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun endRound(): Boolean {
+        if (round != RoundType.RIVER) {
+            val mess = "Start next round!"
+            log(mess)
+            _events.emit(UiEvent.ShowToast(mess))
+            delay(500L)
+        }
         val newRound = when (round) {
             RoundType.PRE_FLOP -> {
                 dealingCommunity(3)
@@ -182,7 +188,22 @@ class MainViewModel @Inject constructor(
         round = newRound
         numOfRaise = 0
         currentBet = 0
+        clearBets()
         return false
+    }
+
+    private fun clearBets() {
+        _state.update {
+            it.copy(
+                players = it.players.map { player ->
+                    if (player.isInGame) {
+                        player.copy(lastBet = ActionType.NoAction())
+                    } else {
+                        player
+                    }
+                }
+            )
+        }
     }
 
     private suspend fun endRiverRound() {
@@ -260,7 +281,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun availableActions(playerIndex: Int): List<ActionType> {
-        val betSize = if (round > RoundType.FLOP) SMALL_BET else BIG_BET
+        val betSize = if (round > RoundType.FLOP) BIG_BET else SMALL_BET
         val chips = player(playerIndex).chips
         val prevPaid = player(playerIndex).lastBet.paid
         val payToCall = currentBet - prevPaid

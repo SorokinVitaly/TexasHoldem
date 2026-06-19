@@ -65,80 +65,21 @@ class MainViewModel @Inject constructor(
             localData.dealerIndex = dealerIndex
             _state.update { it.copy(isActionAvailable = false) }
             _state.update { it.updatePlayer(dealerIndex) { setDialer() } }
-            newDeck()
-            dealingCards()
-            payBlinds()
             currentBet = 0
             numOfRaise = 0
             playerIndex = dealerIndex
             round = RoundType.PRE_FLOP
             history.clear()
-            //mainGameLoop()
+            newDeck()
+            dealingCards()
+            payBlinds()
+            mainGameLoop()
         }
     }
 
-
-    private fun newDeck() {
-        deck.clear()
-        deck.addAll(deckPoker)
-        deck.shuffle()
-    }
-
-    private suspend fun dealingCards() {
-        _state.update { it.updateAllPlayers { clearCards() } }
-        repeat(2) {
-            repeat(4) { index ->
-                if (player(index).isActive) {
-                    delay(300L)
-                    val card = deck.removeAt(deck.lastIndex)
-                    _state.update { it.updatePlayer(index) { addCard(card) } }
-                }
-            }
-        }
-        delay(500L)
-        _state.update { it.updateAllPlayers { sortCards() } }
-
-        /*repeat(4) { index ->
-            if (player(index).isActive) {
-                combinations[index] = calcPreDrawCombination(history, player(index).cards)
-            }
-        }*/
-    }
-
-    private suspend fun payBlinds() {
-        val dealerIndex = nextInGameIndex(localData.dealerIndex)
-        playerIndex = dealerIndex
-
-
-        repeat(4) { index ->
-            if (player(index).isActive) {
-                delay(300L)
-                _state.update { it.payToBank(index, SMALL_BLIND) }
-            }
-        }
-    }
-
-    private fun nextInGameIndex(index: Int): Int {
-        val first = (index + 1) and 3
-        var current = first
-
-        while (true) {
-            if (player(current).isInGame) {
-                return current
-            }
-            current = (current + 1) and 3
-            if (current == first) {
-                throw IllegalStateException("Next player not found")
-            }
-        }
-    }
-
-    private fun player(index: Int) = _state.value.players[index]
-
-    /*
     fun onAction(action: ActionType) {
         viewModelScope.launch {
-            _state.update { it.copy(isActionAvailable = false, isDrawEnabled = false) }
+            _state.update { it.copy(isActionAvailable = false) }
             applyAction(0, action)
             mainGameLoop()
         }
@@ -153,11 +94,7 @@ class MainViewModel @Inject constructor(
                 return
             }
 
-            val endRound = if (round != RoundType.DRAW) {
-                inGamePlayers.all { it.lastBet.bet == currentBet }
-            } else {
-                inGamePlayers.all { it.lastDraw is ActionType.Draw }
-            }
+            val endRound = inGamePlayers.all { it.lastBet !is ActionType.NoAction && it.lastBet.paid == currentBet }
             if (endRound) {
                 if (endRound()) {
                     return
@@ -167,10 +104,6 @@ class MainViewModel @Inject constructor(
             playerIndex = nextInGameIndex(playerIndex)
             val availableActions = availableActions(playerIndex)
             if (playerIndex == 0) {
-                if (round == RoundType.DRAW) {
-                    _state.update { it.copy(isDrawEnabled = true) }
-                    _events.emit(UiEvent.ShowToast("Please choose cards to draw"))
-                }
                 _state.update { it.copy(isActionAvailable = true, actionsAvailable = availableActions) }
                 return
             } else {
@@ -178,64 +111,6 @@ class MainViewModel @Inject constructor(
                 applyAction(playerIndex, action)
             }
         }
-    }
-
-    private suspend fun endRound(): Boolean {
-        val newRound = when (round) {
-            RoundType.PRE_DRAW -> {
-                RoundType.DRAW
-            }
-            RoundType.DRAW -> {
-                endDrawRound()
-                RoundType.POST_DRAW
-            }
-            RoundType.POST_DRAW -> {
-                endPostDrawRound()
-                return true
-            }
-        }
-        playerIndex = localData.dealerIndex
-        round = newRound
-        return false
-    }
-
-    private fun endDrawRound() {
-        _state.update {
-            it.copy(
-                players = it.players.map { player ->
-                    if (player.isInGame) {
-                        player.copy(lastBet = ActionType.NoAction())
-                    } else {
-                        player
-                    }
-                }
-            )
-        }
-        repeat(4) { index ->
-            if (player(index).isInGame) {
-                combinations[index] = DrawCombination(
-                    onHandCombination = calcCombination(player(index).cards)
-                )
-            }
-        }
-    }
-
-    private suspend fun endPostDrawRound() {
-        _state.update { it.copy(isCardsOpen = true) }
-        val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
-            if (playerData.isInGame) {
-                val combination = combinations[i]
-                requireNotNull(combination)
-                i to combination.onHandCombination
-            }
-            else {
-                null
-            }
-        }
-        val winCombination = inGameCombinations.maxBy { it.second }.second
-        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }
-        takeBank(winIndexes)
-        gameOver()
     }
 
     private suspend fun takeBank(winIndexes: List<Int>) {
@@ -276,125 +151,164 @@ class MainViewModel @Inject constructor(
     private fun gameOver() {
         localData.saveState(_state.value)
         _state.update { it.copy(
+            communityCards = emptyList(),
             actionsAvailable = emptyList(),
-            isDrawEnabled = false,
             isActionAvailable = true,
             isDealAvailable = true,
             isResetAvailable = true
         ) }
     }
 
+    private suspend fun endRound(): Boolean {
+        val newRound = when (round) {
+            RoundType.PRE_FLOP -> {
+                dealingCommunity(3)
+                RoundType.FLOP
+            }
+            RoundType.FLOP -> {
+                dealingCommunity(1)
+                RoundType.TURN
+            }
+            RoundType.TURN -> {
+                dealingCommunity(1)
+                RoundType.RIVER
+            }
+            RoundType.RIVER -> {
+                endRiverRound()
+                return true
+            }
+        }
+        playerIndex = localData.dealerIndex
+        round = newRound
+        numOfRaise = 0
+        currentBet = 0
+        return false
+    }
+
+    private suspend fun endRiverRound() {
+        _state.update { it.copy(isCardsOpen = true) }
+        val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
+            if (playerData.isInGame) {
+                val combination = combinations[i]
+                requireNotNull(combination)
+                i to combination.onHandCombination
+            }
+            else {
+                null
+            }
+        }
+        val winCombination = inGameCombinations.maxBy { it.second }.second
+        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }
+        takeBank(winIndexes)
+        gameOver()
+    }
+
+    private fun newDeck() {
+        deck.clear()
+        deck.addAll(deckPoker)
+        deck.shuffle()
+    }
+
+    private suspend fun dealingCards() {
+        _state.update { it.updateAllPlayers { clearCards() } }
+        repeat(2) {
+            repeat(4) { index ->
+                if (player(index).isActive) {
+                    delay(300L)
+                    val card = deck.removeAt(deck.lastIndex)
+                    _state.update { it.updatePlayer(index) { addCard(card) } }
+                }
+            }
+        }
+        /*repeat(4) { index ->
+            if (player(index).isActive) {
+                combinations[index] = calcPreDrawCombination(history, player(index).cards)
+            }
+        }*/
+    }
+
+    private suspend fun dealingCommunity(numCards: Int) {
+        repeat(numCards) {
+            delay(300L)
+            val card = deck.removeAt(deck.lastIndex)
+            _state.update { it.copy(communityCards = it.communityCards + card) }
+        }
+    }
+
+    private suspend fun payBlinds() {
+        delay(300L)
+        playerIndex = nextInGameIndex(playerIndex)
+        applyAction(playerIndex, ActionType.SmallBlind())
+        delay(300L)
+        playerIndex = nextInGameIndex(playerIndex)
+        applyAction(playerIndex, ActionType.BigBlind())
+    }
+
+    private fun nextInGameIndex(index: Int): Int {
+        val first = (index + 1) and 3
+        var current = first
+
+        while (true) {
+            if (player(current).isInGame) {
+                return current
+            }
+            current = (current + 1) and 3
+            if (current == first) {
+                throw IllegalStateException("Next player not found")
+            }
+        }
+    }
+
     private fun availableActions(playerIndex: Int): List<ActionType> {
-        if (round == RoundType.DRAW) {
-            return listOf(ActionType.Draw())
-        }
-        val (betCount, raiseCount) = if (round == RoundType.PRE_DRAW) PRE_DRAW_BET to PRE_DRAW_RAISE else POST_DRAW_BET to POST_DRAW_RAISE
+        val betSize = if (round > RoundType.FLOP) SMALL_BET else BIG_BET
         val chips = player(playerIndex).chips
+        val prevPaid = player(playerIndex).lastBet.paid
+        val payToCall = currentBet - prevPaid
         val bets = ArrayList<ActionType>()
-        if (currentBet == 0) {
-            bets.add(ActionType.Check())
-            if (chips >= betCount) {
-                bets.add(ActionType.Bet(betCount))
-            }
-            bets.add(ActionType.Fold())
+
+        if (payToCall == 0) {
+            bets.add(ActionType.Check(currentBet))
         } else {
-            if (chips >= currentBet) {
-                bets.add(ActionType.Call(currentBet))
+            if (chips >= payToCall) {
+                bets.add(ActionType.Call(currentBet, prevPaid))
             }
-            if (chips >= currentBet + raiseCount && numOfRaise < MAX_NUM_OF_RAISE) {
-                bets.add(ActionType.Raise(currentBet + raiseCount))
-            }
-            bets.add(ActionType.Fold())
         }
-        require(bets.isNotEmpty())
+
+        if (currentBet == 0) {
+            if (chips >= betSize) {
+                bets.add(ActionType.Bet(betSize))
+            }
+        } else {
+            val raiseTo = currentBet + betSize
+            if (chips >= raiseTo - prevPaid && numOfRaise < MAX_NUM_OF_RAISE) {
+                bets.add(ActionType.Raise(raiseTo, prevPaid))
+            }
+        }
+
+        bets.add(ActionType.Fold())
         return bets
     }
 
-    private fun botBetting(index: Int, availableActions: List<ActionType>): ActionType {
-        val firstAction = availableActions.first()
-        return if (firstAction is ActionType.Draw) {
-            val combination = combinations[index]
-            requireNotNull(combination)
-            _state.update { it.updatePlayer(index) { setSelected(combination.cardsForDraw) } }
-            firstAction
-        } else {
-            val isPreDraw = round == RoundType.PRE_DRAW
-            val combination = combinations[index]
-            requireNotNull(combination)
-            val strength = calcHandStrength(combination, isPreDraw)
-            val playerCount = _state.value.players.count { it.isActive }
-            val positionFromDealer = (index - localData.dealerIndex - 1 + playerCount) % playerCount
-            val isLatePosition = positionFromDealer >= 2
-            val isFacingBet = currentBet > 0
-
-            val potOdds: Float = currentBet.toFloat() / (_state.value.bankChips + currentBet).toFloat()
-            val drawProbability = if (isPreDraw) drawOdds[combination.incompleteCombination] else 0f
-            requireNotNull(drawProbability)
-            val drawIsWorthIt = drawProbability > 0f && potOdds <= drawProbability
-
-            val strategy = selectBotStrategy(
-                strength,
-                numOfRaise,
-                isLatePosition,
-                drawIsWorthIt,
-                isFacingBet,
-                isPreDraw
-            )
-            val action = resolveAction(strategy, availableActions)
-            log("botBetting: $index -> ${player(index).cards} $strength $strategy ${action.name}")
-            action
-        }
-    }
-
-    private suspend fun applyAction(index: Int, action: ActionType) {
+    private fun applyAction(index: Int, action: ActionType) {
         log("$index: ${action.name}")
         if (action is ActionType.Raise) {
             numOfRaise++
         }
-        if (action is ActionType.Draw) {
-            val selected = _state.value.players[index].selectedCards
-            val newAction = ActionType.Draw(selected.size)
-            if (selected.isNotEmpty()) {
-                selected.forEach { card ->
-                    _state.update { it.updatePlayer(index) { removeCard(card) } }
-                    delay(300L)
-                }
-                delay(500L)
-                selected.forEach { card ->
-                    val newCard = deck.removeAt(deck.lastIndex)
-                    _state.update { it.updatePlayer(index) { addCard(newCard) } }
-                    delay(300L)
-                }
-                _state.update { it.updatePlayer(index) { clearSelected().sortCards() } }
-            }
-            history.add(index, newAction)
-            _state.update { it.updatePlayer(index) { copy(lastDraw = newAction) } }
-        } else {
-            if (action.bet > 0) {
-                currentBet = action.bet
-                _state.update { it.payToBank(index, action.bet) }
-            }
-            history.add(index, action)
-            _state.update { it.updatePlayer(index) { copy(lastBet = action) } }
+        if (action.paid > currentBet) {
+            currentBet = action.paid
         }
+        if (action.payNow > 0) {
+            _state.update { it.payToBank(index, action.payNow) }
+        }
+        history.add(index, action)
+        _state.update { it.updatePlayer(index) { copy(lastBet = action) } }
     }
 
-*/
+    private fun botBetting(index: Int, availableActions: List<ActionType>): ActionType {
+        return availableActions.random()
+    }
+
+    private fun player(index: Int) = _state.value.players[index]
+
     private fun log(mess: String) = Log.e("GamePlay", mess)
-
-    companion object {
-        const val SMALL_BLIND = 1
-        const val BIG_BLIND = 2
-        const val SMALL_BET = 2
-        const val BIG_BET = 4
-        const val MAX_NUM_OF_RAISE = 3
-
-        val drawOdds = mapOf(
-            IncompleteCombinationType.FOUR_TO_FLUSH to 0.19f,
-            IncompleteCombinationType.FOUR_TO_STRAIGHT_OPEN to 0.17f,
-            IncompleteCombinationType.FOUR_TO_STRAIGHT to 0.09f,
-            IncompleteCombinationType.THREE_TO_STRAIGHT_FLUSH to 0.12f,
-            IncompleteCombinationType.NO_INCOMPLETE to 0f
-        )
-    }
 }

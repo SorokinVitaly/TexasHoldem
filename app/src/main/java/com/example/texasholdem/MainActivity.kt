@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
         if (state.isActionAvailable) {
             if (state.actionsAvailable.isNotEmpty()) {
                 state.actionsAvailable.forEach { action ->
-                    AppButton(action.name) //{ viewModel.onAction(action) }
+                    AppButton(action.name) { viewModel.onAction(action) }
                 }
             } else {
                 if (state.isDealAvailable) {

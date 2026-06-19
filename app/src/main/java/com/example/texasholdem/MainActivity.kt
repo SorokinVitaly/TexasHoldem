@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstrainScope
+import androidx.constraintlayout.compose.ConstrainedLayoutReference
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
@@ -81,6 +82,7 @@ class MainActivity : ComponentActivity() {
                         communityCards = state.communityCards,
                         modifier = Modifier.constrainAs(createRef()) { centerTo(parent) }
                     )
+                    val refs = state.players.indices.map { createRef() }
                     state.players.forEachIndexed { i, player ->
                         val isCardsOpen = when {
                             i==0 -> true
@@ -91,8 +93,8 @@ class MainActivity : ComponentActivity() {
                             playerData = player,
                             isCardsOpen = isCardsOpen,
                             modifier = Modifier.constrainAs(
-                                createRef(),
-                                playerConstraint(i)
+                                refs[i],
+                                playerConstraint(i, refs)
                             )
                         )
                     }
@@ -135,26 +137,44 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun playerConstraint(index: Int): ConstrainScope.() -> Unit = {
+    private fun playerConstraint(
+        index: Int,
+        refs: List<ConstrainedLayoutReference>
+    ): ConstrainScope.() -> Unit = {
+        val margin = 5.dp
         when (index) {
             0 -> {
                 centerHorizontallyTo(parent)
-                bottom.linkTo(parent.bottom, margin = 5.dp)
+                bottom.linkTo(parent.bottom, margin = margin)
             }
 
             1 -> {
-                centerVerticallyTo(parent)
-                absoluteLeft.linkTo(parent.absoluteLeft, margin = 5.dp)
+                top.linkTo(refs[2].bottom, margin = margin)
+                bottom.linkTo(parent.bottom, margin = margin)
+                absoluteLeft.linkTo(parent.absoluteLeft, margin = margin)
             }
 
             2 -> {
+                top.linkTo(parent.top, margin = margin)
+                bottom.linkTo(refs[1].top, margin = margin)
+                absoluteLeft.linkTo(parent.absoluteLeft, margin = margin)
+            }
+
+            3 -> {
                 centerHorizontallyTo(parent)
                 top.linkTo(parent.top, margin = 5.dp)
             }
 
-            3 -> {
-                centerVerticallyTo(parent)
-                absoluteRight.linkTo(parent.absoluteRight, margin = 5.dp)
+            4 -> {
+                top.linkTo(parent.top, margin = margin)
+                bottom.linkTo(refs[5].top, margin = margin)
+                absoluteRight.linkTo(parent.absoluteRight, margin = margin)
+            }
+
+            5 -> {
+                top.linkTo(refs[4].bottom, margin = margin)
+                bottom.linkTo(parent.bottom, margin = margin)
+                absoluteRight.linkTo(parent.absoluteRight, margin = margin)
             }
 
             else -> throw IllegalArgumentException("Invalid player index: $index")

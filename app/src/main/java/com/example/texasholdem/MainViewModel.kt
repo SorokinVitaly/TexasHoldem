@@ -37,7 +37,7 @@ class MainViewModel @Inject constructor(
     private var numOfRaise = 0
     private var playerIndex = 0
     private var round = RoundType.PRE_FLOP
-    private val combinations = arrayOfNulls<DrawCombination?>(4)
+    private val combinations = arrayOfNulls<DrawCombination?>(6)
 
     init {
         if (localData.isGameStarted) {
@@ -94,7 +94,9 @@ class MainViewModel @Inject constructor(
                 return
             }
 
-            val endRound = inGamePlayers.all { it.lastBet !is ActionType.NoAction && it.lastBet.paid == currentBet }
+            val endRound = inGamePlayers.all {
+                it.lastBet !is ActionType.NoAction && it.lastBet.paid == currentBet
+            }
             if (endRound) {
                 if (endRound()) {
                     return
@@ -164,7 +166,7 @@ class MainViewModel @Inject constructor(
             val mess = "Start next round!"
             log(mess)
             _events.emit(UiEvent.ShowToast(mess))
-            delay(500L)
+            delay(2000L)
         }
         val newRound = when (round) {
             RoundType.PRE_FLOP -> {
@@ -208,7 +210,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun endRiverRound() {
         _state.update { it.copy(isCardsOpen = true) }
-        val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
+        /*val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
             if (playerData.isInGame) {
                 val combination = combinations[i]
                 requireNotNull(combination)
@@ -219,7 +221,9 @@ class MainViewModel @Inject constructor(
             }
         }
         val winCombination = inGameCombinations.maxBy { it.second }.second
-        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }
+        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }*/
+
+        val winIndexes = listOf(0)
         takeBank(winIndexes)
         gameOver()
     }
@@ -233,7 +237,7 @@ class MainViewModel @Inject constructor(
     private suspend fun dealingCards() {
         _state.update { it.updateAllPlayers { clearCards() } }
         repeat(2) {
-            repeat(4) { index ->
+            repeat(6) { index ->
                 if (player(index).isActive) {
                     delay(300L)
                     val card = deck.removeAt(deck.lastIndex)
@@ -241,7 +245,7 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
-        /*repeat(4) { index ->
+        /*repeat(6) { index ->
             if (player(index).isActive) {
                 combinations[index] = calcPreDrawCombination(history, player(index).cards)
             }
@@ -266,14 +270,14 @@ class MainViewModel @Inject constructor(
     }
 
     private fun nextInGameIndex(index: Int): Int {
-        val first = (index + 1) and 3
+        val first = (index + 1) % 6
         var current = first
 
         while (true) {
             if (player(current).isInGame) {
                 return current
             }
-            current = (current + 1) and 3
+            current = (current + 1) % 6
             if (current == first) {
                 throw IllegalStateException("Next player not found")
             }

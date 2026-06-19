@@ -10,11 +10,15 @@ interface LocalDataRepository {
     var player1Name: String
     var player2Name: String
     var player3Name: String
+    var player4Name: String
+    var player5Name: String
 
     var player0Chips: Int
     var player1Chips: Int
     var player2Chips: Int
     var player3Chips: Int
+    var player4Chips: Int
+    var player5Chips: Int
 
     var isGameStarted: Boolean
     var isJustReset: Boolean
@@ -45,6 +49,14 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
         ::player3Name.name,
         DEFAULT_PLAYER_3_NAME
     )
+    override var player4Name: String by PreferencesDelegate(
+        ::player4Name.name,
+        DEFAULT_PLAYER_4_NAME
+    )
+    override var player5Name: String by PreferencesDelegate(
+        ::player5Name.name,
+        DEFAULT_PLAYER_5_NAME
+    )
     override var player0Chips: Int by PreferencesDelegate(
         ::player0Chips.name,
         DEFAULT_CHIP_NUMBER
@@ -61,6 +73,14 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
         ::player3Chips.name,
         DEFAULT_CHIP_NUMBER
     )
+    override var player4Chips: Int by PreferencesDelegate(
+        ::player4Chips.name,
+        DEFAULT_CHIP_NUMBER
+    )
+    override var player5Chips: Int by PreferencesDelegate(
+        ::player5Chips.name,
+        DEFAULT_CHIP_NUMBER
+    )
     override var isGameStarted: Boolean by PreferencesDelegate(
         ::isGameStarted.name,
         false
@@ -71,7 +91,7 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
     )
     override var dealerIndex: Int by PreferencesDelegate(
         ::dealerIndex.name,
-        Random.nextInt(4)
+        Random.nextInt(6)
     )
 
     override fun resetGame() {
@@ -79,9 +99,11 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
         player1Chips = DEFAULT_CHIP_NUMBER
         player2Chips = DEFAULT_CHIP_NUMBER
         player3Chips = DEFAULT_CHIP_NUMBER
+        player4Chips = DEFAULT_CHIP_NUMBER
+        player5Chips = DEFAULT_CHIP_NUMBER
         isGameStarted = false
         isJustReset = true
-        dealerIndex = Random.nextInt(4)
+        dealerIndex = Random.nextInt(6)
     }
 
     override fun savedState(): ScreenState {
@@ -105,7 +127,17 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
             chips = player3Chips,
             isActive = player3Chips > 0
         )
-        val players = listOf(player0, player1, player2, player3)
+        val player4 = PlayerData(
+            name = player4Name,
+            chips = player4Chips,
+            isActive = player4Chips > 0
+        )
+        val player5 = PlayerData(
+            name = player5Name,
+            chips = player5Chips,
+            isActive = player5Chips > 0
+        )
+        val players = listOf(player0, player1, player2, player3, player4, player5)
 
         return ScreenState(
             players = players,
@@ -123,11 +155,15 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
         player1Name = state.players[1].name
         player2Name = state.players[2].name
         player3Name = state.players[3].name
+        player4Name = state.players[4].name
+        player5Name = state.players[5].name
 
         player0Chips = state.players[0].chips
         player1Chips = state.players[1].chips
         player2Chips = state.players[2].chips
         player3Chips = state.players[3].chips
+        player4Chips = state.players[4].chips
+        player5Chips = state.players[5].chips
 
         isGameStarted = false
         isJustReset = false
@@ -138,6 +174,8 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
         const val DEFAULT_PLAYER_1_NAME = "Lesley Colon"
         const val DEFAULT_PLAYER_2_NAME = "Leon Kim"
         const val DEFAULT_PLAYER_3_NAME = "Vanessa May"
+        const val DEFAULT_PLAYER_4_NAME = "Omer Griffin"
+        const val DEFAULT_PLAYER_5_NAME = "Yolanda Young"
         const val DEFAULT_CHIP_NUMBER = 1000
     }
 }

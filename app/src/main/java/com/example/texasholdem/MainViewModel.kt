@@ -25,19 +25,12 @@ class MainViewModel @Inject constructor(
     private val _events = MutableSharedFlow<UiEvent>()
     val events = _events.asSharedFlow()
 
-    enum class RoundType {
-        PRE_FLOP,
-        FLOP,
-        TURN,
-        RIVER
-    }
-
     private val deck = mutableListOf<Card>()
     private var currentBet = 0
     private var numOfRaise = 0
     private var playerIndex = 0
     private var round = RoundType.PRE_FLOP
-    private val combinations = arrayOfNulls<DrawCombination?>(6)
+    private val combinations = arrayOfNulls<IncompleteCombination?>(6)
 
     init {
         if (localData.isGameStarted) {

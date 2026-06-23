@@ -64,6 +64,7 @@ class MainViewModel @Inject constructor(
             playerIndex = dealerIndex
             round = RoundType.PRE_FLOP
             history.clear()
+            history.startRound()
             newDeck()
             dealingCards()
             payBlinds()
@@ -181,6 +182,7 @@ class MainViewModel @Inject constructor(
         round = newRound
         numOfRaise = 0
         currentBet = 0
+        history.startRound()
         clearBets()
         return false
     }
@@ -224,19 +226,17 @@ class MainViewModel @Inject constructor(
 
     private suspend fun endRiverRound() {
         _state.update { it.copy(isCardsOpen = true) }
-        /*val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
+        val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
             if (playerData.isInGame) {
-                val combination = combinations[i]
-                requireNotNull(combination)
-                i to combination.onHandCombination
+                val data = preCalculatedData[i]
+                requireNotNull(data)
+                i to data.combination
             } else {
                 null
             }
         }
         val winCombination = inGameCombinations.maxBy { it.second }.second
-        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }*/
-
-        val winIndexes = listOf(0)
+        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }
         takeBank(winIndexes)
         gameOver()
     }
@@ -258,11 +258,11 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
-        /*repeat(6) { index ->
+        repeat(6) { index ->
             if (player(index).isActive) {
-                combinations[index] = calcPreDrawCombination(history, player(index).cards)
+                preFlopStrength[index] = preFlopStrength(player(index).cards)
             }
-        }*/
+        }
     }
 
     private suspend fun dealingCommunity(numCards: Int) {
@@ -344,7 +344,34 @@ class MainViewModel @Inject constructor(
     }
 
     private fun botBetting(index: Int, availableActions: List<ActionType>): ActionType {
-        return availableActions.random()
+        val (strength, potentialBluff) = if (round == RoundType.PRE_FLOP) {
+            val preFlopStrength = preFlopStrength[index]
+            requireNotNull(preFlopStrength)
+            preFlopStrength to false
+        } else {
+            val data = preCalculatedData[index]
+            requireNotNull(data)
+            val bankChips = _state.value.bankChips
+            val prevPaid = player(index).lastBet.paid
+            val payToCall = currentBet - prevPaid
+            val potOdds = if (bankChips + payToCall == 0) 0f
+            else payToCall.toFloat() / (bankChips + payToCall)
+            val hasStrongDraw = data.incompleteCombination.type >= IncompleteCombinationType.FOUR_TO_STRAIGHT_OPEN
+            equityToStrength(data.equity, potOdds) to hasStrongDraw
+        }
+
+        val playerCount = _state.value.players.count { it.isActive }
+        val positionFromDealer = (index - localData.dealerIndex - 1 + playerCount) % playerCount
+        val tableFactor = TableFactor(
+            numOfRaise = numOfRaise,
+            isLatePosition = positionFromDealer >= 2,
+            isFacingBet = currentBet > 0,
+            semiBluffPotential = potentialBluff,
+            tableIsAggressive = history.isAggressiveTable(),
+            tableIsPassive = history.isPassiveRound()
+        )
+        val strategy = resolveStrategy(strength, tableFactor)
+        return resolveAction(strategy, availableActions)
     }
 
     private fun player(index: Int) = _state.value.players[index]

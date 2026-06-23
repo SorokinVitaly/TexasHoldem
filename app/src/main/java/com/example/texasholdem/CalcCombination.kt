@@ -1,10 +1,18 @@
 package com.example.texasholdem
 
-import com.example.texasholdem.Card
+fun calcCombination(community: List<Card>, pocket: List<Card>): Combination {
+    require(pocket.size == 2 && community.size in 3..5)
+    val allCards = (community + pocket).sorted()
+    return when (allCards.size) {
+        5 -> calcCombinationFiveCards(allCards)
+        6 -> calcCombinationSixCards(allCards, pocket)
+        7 -> calcCombinationSevenCards(allCards, pocket)
+        else -> throw IllegalStateException("Invalid number of cards")
+    }
+}
 
 fun calcCombinationFiveCards(cards: List<Card>): Combination {
     require(cards.size == 5)
-
     val ranks = cards.map { it.rank }
     val isFlush = cards.all { it.suit == cards[0].suit }
 
@@ -124,7 +132,7 @@ private val noCombination = Combination(
     members = emptyList()
 )
 
-fun calcCombinationSixCards(cards: List<Card>, pocket: List<Card>): Combination {
+private fun calcCombinationSixCards(cards: List<Card>, pocket: List<Card>): Combination {
     require(cards.size == 6)
     var bestCombination = noCombination
     cards.forEach { card ->
@@ -134,11 +142,10 @@ fun calcCombinationSixCards(cards: List<Card>, pocket: List<Card>): Combination 
             }
         }
     }
-    //compareWithPocket(other: Combination, pocket: List<Card>)
     return bestCombination
 }
 
-fun calcCombinationSevenCards(cards: List<Card>, pocket: List<Card>): Combination {
+private fun calcCombinationSevenCards(cards: List<Card>, pocket: List<Card>): Combination {
     require(cards.size == 7)
     var bestCombination = noCombination
     cards.forEach { card ->

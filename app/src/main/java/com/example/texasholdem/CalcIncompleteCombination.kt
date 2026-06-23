@@ -1,5 +1,20 @@
 package com.example.texasholdem
 
+fun calcIncompleteCombination(
+    community: List<Card>,
+    pocket: List<Card>,
+    combination: Combination
+): IncompleteCombination {
+    require(pocket.size == 2 && community.size in 3..5)
+    val allCards = (community + pocket).sorted()
+    return when (allCards.size) {
+        5 -> calcIncompleteCombinationFiveCards(allCards, combination)
+        6 -> calcIncompleteCombinationSixCards(allCards, pocket, combination)
+        7 -> IncompleteCombination()
+        else -> throw IllegalStateException("Invalid number of cards")
+    }
+}
+
 fun calcIncompleteCombinationFiveCards(
     cards: List<Card>,
     combination: Combination
@@ -28,8 +43,8 @@ fun calcIncompleteCombinationFiveCards(
 
 fun calcIncompleteCombinationSixCards(
     cards: List<Card>,
-    combination: Combination,
-    pocket: List<Card>
+    pocket: List<Card>,
+    combination: Combination
 ): IncompleteCombination {
     require(cards.size == 6)
     var bestCombination = IncompleteCombination()

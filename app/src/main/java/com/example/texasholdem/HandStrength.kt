@@ -31,7 +31,7 @@ fun calcStrength(pocket: List<Card>, community: List<Card>, round: RoundType): H
     return HandStrength.WEAK
 }
 
-private fun preFlopStrength(pocket: List<Card>): HandStrength {
+fun preFlopStrength(pocket: List<Card>): HandStrength {
     val (c1, c2) = pocket
     val isPair = c1.rank == c2.rank
     val isSuited = c1.suit == c2.suit

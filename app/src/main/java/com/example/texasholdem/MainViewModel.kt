@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.Int
 
 
 @HiltViewModel
@@ -30,7 +30,8 @@ class MainViewModel @Inject constructor(
     private var numOfRaise = 0
     private var playerIndex = 0
     private var round = RoundType.PRE_FLOP
-    private val combinations = arrayOfNulls<IncompleteCombination?>(6)
+    private val preFlopStrength = arrayOfNulls<HandStrength?>(6)
+    private val preCalculatedData = arrayOfNulls<PreCalculatedData?>(6)
 
     init {
         if (localData.isGameStarted) {
@@ -116,7 +117,6 @@ class MainViewModel @Inject constructor(
         _events.emit(UiEvent.ShowToast(mess))
 
         fun take(index: Int, amount: Int) {
-            log("${_state.value.players[index].name} take $amount")
             _state.update { it.takeFromBank(index, amount) }
         }
 
@@ -146,7 +146,6 @@ class MainViewModel @Inject constructor(
     private fun gameOver() {
         localData.saveState(_state.value)
         _state.update { it.copy(
-            communityCards = emptyList(),
             actionsAvailable = emptyList(),
             isActionAvailable = true,
             isDealAvailable = true,
@@ -159,7 +158,6 @@ class MainViewModel @Inject constructor(
             val mess = "Start next round!"
             log(mess)
             _events.emit(UiEvent.ShowToast(mess))
-            delay(2000L)
         }
         val newRound = when (round) {
             RoundType.PRE_FLOP -> {
@@ -187,6 +185,29 @@ class MainViewModel @Inject constructor(
         return false
     }
 
+    private suspend fun preCalculateData() = coroutineScope {
+        val community = _state.value.communityCards
+        _state.value.players.mapIndexedNotNull { i, playerData ->
+            if (playerData.isInGame) {
+                launch {
+                    val pocket = playerData.cards
+                    val combination = calcCombination(community, pocket)
+                    preCalculatedData[i] = PreCalculatedData(
+                        combination = combination,
+                        incompleteCombination = calcIncompleteCombination(
+                            community,
+                            pocket,
+                            combination
+                        ),
+                        equity = calcEquity(pocket, community)
+                    )
+                }
+            } else {
+                null
+            }
+        }
+    }
+
     private fun clearBets() {
         _state.update {
             it.copy(
@@ -208,8 +229,7 @@ class MainViewModel @Inject constructor(
                 val combination = combinations[i]
                 requireNotNull(combination)
                 i to combination.onHandCombination
-            }
-            else {
+            } else {
                 null
             }
         }
@@ -251,6 +271,7 @@ class MainViewModel @Inject constructor(
             val card = deck.removeAt(deck.lastIndex)
             _state.update { it.copy(communityCards = it.communityCards + card) }
         }
+        preCalculateData()
     }
 
     private suspend fun payBlinds() {

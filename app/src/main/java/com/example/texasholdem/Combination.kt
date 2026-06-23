@@ -89,3 +89,9 @@ class IncompleteCombination(
         }
     }
 }
+
+class PreCalculatedData(
+    val combination: Combination,
+    val incompleteCombination: IncompleteCombination,
+    val equity: Float
+)

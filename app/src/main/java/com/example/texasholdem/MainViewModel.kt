@@ -154,22 +154,19 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun endRound(): Boolean {
-        if (round != RoundType.RIVER) {
-            logAndShow("Start next round!")
-        }
         val newRound = when (round) {
-            RoundType.PRE_FLOP -> {
-                dealingCommunity(3)
-                RoundType.FLOP
-            }
-            RoundType.FLOP -> {
-                dealingCommunity(1)
-                RoundType.TURN
-            }
-            RoundType.TURN -> {
-                dealingCommunity(1)
-                RoundType.RIVER
-            }
+            RoundType.PRE_FLOP -> RoundType.FLOP
+            RoundType.FLOP -> RoundType.TURN
+            RoundType.TURN -> RoundType.RIVER
+            RoundType.RIVER -> RoundType.PRE_FLOP
+        }
+        if (round != RoundType.RIVER) {
+            logAndShow("Start ${newRound.name} round!")
+        }
+        when (round) {
+            RoundType.PRE_FLOP -> dealingCommunity(3)
+            RoundType.FLOP -> dealingCommunity(1)
+            RoundType.TURN -> dealingCommunity(1)
             RoundType.RIVER -> {
                 endRiverRound()
                 return true

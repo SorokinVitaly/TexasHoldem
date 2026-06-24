@@ -17,22 +17,25 @@ data class TableFactor(
 
 fun preFlopStrength(pocket: List<Card>): HandStrength {
     val (c1, c2) = pocket
-    val isPair = c1.rank == c2.rank
-    val isSuited = c1.suit == c2.suit
+    val isPair = c2.rank == c1.rank
     val gap = c2.rank.ordinal - c1.rank.ordinal
 
-    return when {
-        isPair && c2.rank >= CardRank.TEN                   -> HandStrength.MONSTER
-        isPair && c2.rank >= CardRank.SEVEN                 -> HandStrength.STRONG
-        c2.rank == CardRank.ACE && c1.rank >= CardRank.TEN  -> HandStrength.STRONG
-        isPair                                              -> HandStrength.MEDIUM
-        c2.rank >= CardRank.JACK && c1.rank >= CardRank.TEN -> HandStrength.MEDIUM
-        isSuited && gap <= 2 && c1.rank >= CardRank.SIX     -> HandStrength.DRAWING
-        else                                                -> HandStrength.WEAK
+    when {
+        isPair && c2.rank >= CardRank.TEN ->                    return HandStrength.MONSTER
+        isPair && c2.rank >= CardRank.SEVEN ->                  return HandStrength.STRONG
+        c2.rank == CardRank.ACE && c1.rank >= CardRank.TEN ->   return HandStrength.STRONG
+        isPair ->                                               return HandStrength.MEDIUM
+        c2.rank >= CardRank.JACK && c1.rank >= CardRank.TEN ->  return HandStrength.MEDIUM
     }
+    if (c1.suit == c2.suit) {
+        if (c2.rank == CardRank.ACE)                            return HandStrength.MEDIUM
+        if ((c2.rank == CardRank.KING && c1.rank >= CardRank.EIGHT) ||
+            (c1.rank >= CardRank.SIX && gap <= 2) || gap <= 1)  return HandStrength.DRAWING
+    }
+    return HandStrength.WEAK
 }
 
-private const val MONSTER_EQUITY = 0.85f
+private const val MONSTER_EQUITY = 0.91f
 private const val VALUE_RAISE_EDGE = 0.30f
 private const val MEDIUM_EDGE = 0.10f
 private const val MARGINAL_CALL_EDGE = 0f

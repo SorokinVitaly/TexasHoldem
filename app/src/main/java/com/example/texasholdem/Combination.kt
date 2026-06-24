@@ -92,6 +92,7 @@ class IncompleteCombination(
 
 class PreCalculatedData(
     val combination: Combination,
-    val incompleteCombination: IncompleteCombination,
-    val equity: Float
+    val incompleteCombination: IncompleteCombination = IncompleteCombination(),
+    val opponentsCount: Int = 0,
+    val equity: Float = 0f
 )

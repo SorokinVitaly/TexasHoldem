@@ -43,10 +43,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             localData.resetGame()
             _state.update { localData.savedState() }
-            val mess = "Game was restarted"
-            log(mess)
             delay(500L)
-            _events.emit(UiEvent.ShowToast(mess))
+            logAndShow("Game was restarted")
         }
     }
 
@@ -89,10 +87,13 @@ class MainViewModel @Inject constructor(
                 return
             }
 
-            val endRound = inGamePlayers.all {
-                it.lastBet !is ActionType.NoAction && it.lastBet.paid == currentBet
+            val endRoundDetected = inGamePlayers.all {
+                it.lastBet.paid == currentBet &&
+                        it.lastBet !is ActionType.NoAction &&
+                        it.lastBet !is ActionType.SmallBlind &&
+                        it.lastBet !is ActionType.BigBlind
             }
-            if (endRound) {
+            if (endRoundDetected) {
                 if (endRound()) {
                     return
                 }
@@ -113,9 +114,7 @@ class MainViewModel @Inject constructor(
     private suspend fun takeBank(winIndexes: List<Int>) {
         require(winIndexes.isNotEmpty())
         val winnersNames = winIndexes.joinToString { player(it).name }
-        val mess = "$winnersNames won and take bank ${_state.value.bankChips} chips"
-        log(mess)
-        _events.emit(UiEvent.ShowToast(mess))
+        logAndShow("$winnersNames won and take bank ${_state.value.bankChips} chips")
 
         fun take(index: Int, amount: Int) {
             _state.update { it.takeFromBank(index, amount) }
@@ -156,9 +155,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun endRound(): Boolean {
         if (round != RoundType.RIVER) {
-            val mess = "Start next round!"
-            log(mess)
-            _events.emit(UiEvent.ShowToast(mess))
+            logAndShow("Start next round!")
         }
         val newRound = when (round) {
             RoundType.PRE_FLOP -> {
@@ -187,27 +184,21 @@ class MainViewModel @Inject constructor(
         return false
     }
 
-    private suspend fun preCalculateData() = coroutineScope {
-        val community = _state.value.communityCards
-        _state.value.players.mapIndexedNotNull { i, playerData ->
+    private suspend fun endRiverRound() {
+        _state.update { it.copy(isCardsOpen = true) }
+        val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
             if (playerData.isInGame) {
-                launch {
-                    val pocket = playerData.cards
-                    val combination = calcCombination(community, pocket)
-                    preCalculatedData[i] = PreCalculatedData(
-                        combination = combination,
-                        incompleteCombination = calcIncompleteCombination(
-                            community,
-                            pocket,
-                            combination
-                        ),
-                        equity = calcEquity(pocket, community)
-                    )
-                }
+                val data = preCalculatedData[i]
+                requireNotNull(data)
+                i to data.combination
             } else {
                 null
             }
         }
+        val winCombination = inGameCombinations.maxBy { it.second }.second
+        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }
+        takeBank(winIndexes)
+        gameOver()
     }
 
     private fun clearBets() {
@@ -224,21 +215,33 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private suspend fun endRiverRound() {
-        _state.update { it.copy(isCardsOpen = true) }
-        val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
+    private suspend fun preCalculateData() = coroutineScope {
+        val community = _state.value.communityCards
+        val opponentsCount = _state.value.players.count { it.isInGame } - 1
+        _state.value.players.mapIndexedNotNull { i, playerData ->
             if (playerData.isInGame) {
-                val data = preCalculatedData[i]
-                requireNotNull(data)
-                i to data.combination
+                launch {
+                    val pocket = playerData.cards
+                    val combination = calcCombination(community, pocket)
+                    preCalculatedData[i] = if (i == 0) {
+                        PreCalculatedData(combination)
+                    } else {
+                        PreCalculatedData(
+                            combination = combination,
+                            incompleteCombination = calcIncompleteCombination(
+                                community,
+                                pocket,
+                                combination
+                            ),
+                            opponentsCount = opponentsCount,
+                            equity = calcEquity(pocket, community, opponentsCount)
+                        )
+                    }
+                }
             } else {
                 null
             }
         }
-        val winCombination = inGameCombinations.maxBy { it.second }.second
-        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }
-        takeBank(winIndexes)
-        gameOver()
     }
 
     private fun newDeck() {
@@ -259,7 +262,7 @@ class MainViewModel @Inject constructor(
             }
         }
         repeat(6) { index ->
-            if (player(index).isActive) {
+            if (index > 0 && player(index).isActive) {
                 preFlopStrength[index] = preFlopStrength(player(index).cards)
             }
         }
@@ -329,7 +332,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun applyAction(index: Int, action: ActionType) {
-        log("$index: ${action.name}")
+        //???log("$index: ${action.name}")
         if (action is ActionType.Raise) {
             numOfRaise++
         }
@@ -357,6 +360,12 @@ class MainViewModel @Inject constructor(
             val potOdds = if (bankChips + payToCall == 0) 0f
             else payToCall.toFloat() / (bankChips + payToCall)
             val hasStrongDraw = data.incompleteCombination.type >= IncompleteCombinationType.FOUR_TO_STRAIGHT_OPEN
+
+            val community = _state.value.communityCards
+            val pocket = player(index).cards
+
+            log("$pocket $community : ${data.opponentsCount} : ${data.equity} : $potOdds")
+
             equityToStrength(data.equity, potOdds) to hasStrongDraw
         }
 
@@ -377,4 +386,9 @@ class MainViewModel @Inject constructor(
     private fun player(index: Int) = _state.value.players[index]
 
     private fun log(mess: String) = Log.e("GamePlay", mess)
+
+    private suspend fun logAndShow(mess: String) {
+        //???log(mess)
+        _events.emit(UiEvent.ShowToast(mess))
+    }
 }

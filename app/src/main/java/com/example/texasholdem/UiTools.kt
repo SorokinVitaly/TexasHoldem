@@ -69,7 +69,7 @@ fun Player(
         }
 
         Text(
-            text = playerData.footerText,
+            text = playerData.lastBet.name,
             style = MaterialTheme.typography.labelSmall,
             color = Color.LightGray
         )

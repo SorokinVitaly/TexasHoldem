@@ -157,23 +157,17 @@ class MainViewModel @Inject constructor(
         val newRound = when (round) {
             RoundType.PRE_FLOP -> RoundType.FLOP
             RoundType.FLOP -> RoundType.TURN
-            RoundType.TURN -> RoundType.RIVER
-            RoundType.RIVER -> RoundType.PRE_FLOP
+            else -> RoundType.RIVER
         }
         if (round != RoundType.RIVER) {
             logAndShow("Start ${newRound.name} round!")
+        } else {
+            endRiverRound()
+            return true
         }
-        when (round) {
-            RoundType.PRE_FLOP -> dealingCommunity(3)
-            RoundType.FLOP -> dealingCommunity(1)
-            RoundType.TURN -> dealingCommunity(1)
-            RoundType.RIVER -> {
-                endRiverRound()
-                return true
-            }
-        }
-        playerIndex = localData.dealerIndex
+        dealingCommunity(if (round == RoundType.PRE_FLOP) 3 else 1)
         round = newRound
+        playerIndex = localData.dealerIndex
         numOfRaise = 0
         currentBet = 0
         history.startRound()

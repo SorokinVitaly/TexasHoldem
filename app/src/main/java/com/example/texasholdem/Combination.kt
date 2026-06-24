@@ -16,7 +16,7 @@ enum class CombinationType {
 enum class IncompleteCombinationType {
     NO_INCOMPLETE,
     THREE_TO_STRAIGHT_FLUSH,
-    FOUR_TO_STRAIGHT, // GUTSHOT
+    FOUR_TO_STRAIGHT,
     FOUR_TO_STRAIGHT_OPEN,
     FOUR_TO_FLUSH
 }

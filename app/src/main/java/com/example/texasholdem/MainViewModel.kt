@@ -196,7 +196,9 @@ class MainViewModel @Inject constructor(
             }
         }
         val winCombination = inGameCombinations.maxBy { it.second }.second
-        val winIndexes = inGameCombinations.filter { it.second == winCombination }.map { it.first }
+        val winIndexes = inGameCombinations.filter {
+            it.second.compareTo(winCombination) == 0
+        }.map { it.first }
         takeBank(winIndexes)
         gameOver()
     }

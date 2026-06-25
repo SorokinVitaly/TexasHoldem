@@ -187,6 +187,13 @@ class MainViewModel @Inject constructor(
             }
         }
         val winCombination = inGameCombinations.maxBy { it.second }.second
+
+        log("winCombination: $winCombination")
+        log("other combinations:")
+        inGameCombinations.filter { it.second < winCombination }.forEach {
+            log("${it.first}: ${it.second}")
+        }
+
         val winIndexes = inGameCombinations.filter {
             it.second.compareTo(winCombination) == 0
         }.map { it.first }
@@ -325,7 +332,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun applyAction(index: Int, action: ActionType) {
-        //???log("$index: ${action.name}")
+        log("$index: ${action.name}")
         if (action is ActionType.Raise) {
             numOfRaise++
         }
@@ -353,12 +360,6 @@ class MainViewModel @Inject constructor(
             val potOdds = if (bankChips + payToCall == 0) 0f
             else payToCall.toFloat() / (bankChips + payToCall)
             val hasStrongDraw = data.incompleteCombination.type >= IncompleteCombinationType.FOUR_TO_STRAIGHT_OPEN
-
-            val community = _state.value.communityCards
-            val pocket = player(index).cards
-
-            log("$pocket $community : ${data.opponentsCount} : ${data.equity} : $potOdds")
-
             equityToStrength(data.equity, potOdds) to hasStrongDraw
         }
 
@@ -381,7 +382,7 @@ class MainViewModel @Inject constructor(
     private fun log(mess: String) = Log.e("GamePlay", mess)
 
     private suspend fun logAndShow(mess: String) {
-        //???log(mess)
+        log(mess)
         _events.emit(UiEvent.ShowToast(mess))
     }
 }

@@ -35,7 +35,7 @@ fun preFlopStrength(pocket: List<Card>): HandStrength {
     return HandStrength.WEAK
 }
 
-private const val MONSTER_EQUITY = 0.91f
+private const val MONSTER_EQUITY = 0.90f
 private const val VALUE_RAISE_EDGE = 0.30f
 private const val MEDIUM_EDGE = 0.10f
 private const val MARGINAL_CALL_EDGE = 0f

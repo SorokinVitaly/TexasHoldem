@@ -45,6 +45,8 @@ data class Combination(
     val kickers: Kickers = Kickers()
 ) : Comparable<Combination> {
 
+    override fun toString(): String = "${type.name} $members ${kickers.list}"
+
     override fun compareTo(other: Combination): Int =
         compareValuesBy(
             this,
@@ -93,6 +95,7 @@ class IncompleteCombination(
 class PreCalculatedData(
     val combination: Combination,
     val incompleteCombination: IncompleteCombination = IncompleteCombination(),
+    @Suppress("Unused")
     val opponentsCount: Int = 0,
     val equity: Float = 0f
 )

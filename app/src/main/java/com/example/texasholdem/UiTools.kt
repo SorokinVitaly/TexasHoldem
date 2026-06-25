@@ -49,6 +49,7 @@ fun Player(
         Text(
             text = playerData.name,
             style = MaterialTheme.typography.titleMedium,
+            fontSize = 12.sp,
             color = Color.White
         )
 

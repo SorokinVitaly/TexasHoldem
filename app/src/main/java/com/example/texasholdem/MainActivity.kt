@@ -1,5 +1,6 @@
 package com.example.texasholdem
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -22,11 +23,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstrainScope
-import androidx.constraintlayout.compose.ConstrainedLayoutReference
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
@@ -82,10 +82,11 @@ class MainActivity : ComponentActivity() {
                         communityCards = state.communityCards,
                         modifier = Modifier.constrainAs(createRef()) { centerTo(parent) }
                     )
+                    val orientation = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
                     val refs = state.players.indices.map { createRef() }
-                    state.players.forEachIndexed { i, player ->
+                    state.players.forEachIndexed { index, player ->
                         val isCardsOpen = when {
-                            i==0 -> true
+                            index == 0 -> true
                             !player.isInGame -> false
                             else -> state.isCardsOpen
                         }
@@ -93,8 +94,8 @@ class MainActivity : ComponentActivity() {
                             playerData = player,
                             isCardsOpen = isCardsOpen,
                             modifier = Modifier.constrainAs(
-                                refs[i],
-                                playerConstraint(i, refs)
+                                refs[index],
+                                playerConstraint(index, orientation, refs)
                             )
                         )
                     }
@@ -134,50 +135,6 @@ class MainActivity : ComponentActivity() {
                     .padding(8.dp)
                     .size(24.dp)
             )
-        }
-    }
-
-    private fun playerConstraint(
-        index: Int,
-        refs: List<ConstrainedLayoutReference>
-    ): ConstrainScope.() -> Unit = {
-        val margin = 5.dp
-        when (index) {
-            0 -> {
-                centerHorizontallyTo(parent)
-                bottom.linkTo(parent.bottom, margin = margin)
-            }
-
-            1 -> {
-                top.linkTo(refs[2].bottom, margin = margin)
-                bottom.linkTo(parent.bottom, margin = margin)
-                absoluteLeft.linkTo(parent.absoluteLeft, margin = margin)
-            }
-
-            2 -> {
-                top.linkTo(parent.top, margin = margin)
-                bottom.linkTo(refs[1].top, margin = margin)
-                absoluteLeft.linkTo(parent.absoluteLeft, margin = margin)
-            }
-
-            3 -> {
-                centerHorizontallyTo(parent)
-                top.linkTo(parent.top, margin = 5.dp)
-            }
-
-            4 -> {
-                top.linkTo(parent.top, margin = margin)
-                bottom.linkTo(refs[5].top, margin = margin)
-                absoluteRight.linkTo(parent.absoluteRight, margin = margin)
-            }
-
-            5 -> {
-                top.linkTo(refs[4].bottom, margin = margin)
-                bottom.linkTo(parent.bottom, margin = margin)
-                absoluteRight.linkTo(parent.absoluteRight, margin = margin)
-            }
-
-            else -> throw IllegalArgumentException("Invalid player index: $index")
         }
     }
 }

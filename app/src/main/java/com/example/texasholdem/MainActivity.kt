@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -75,7 +76,7 @@ class MainActivity : ComponentActivity() {
                 ConstraintLayout(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(12f)
+                        .weight(1f)
                 ) {
                     Bank(
                         bankChips = state.bankChips,
@@ -105,7 +106,7 @@ class MainActivity : ComponentActivity() {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
+                        .wrapContentHeight()
                 ) {
                     ActionBar(state)
                 }

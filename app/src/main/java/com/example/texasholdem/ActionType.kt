@@ -33,4 +33,31 @@ sealed class ActionType(
 
     class Fold : ActionType("Fold")
     class NoAction : ActionType("")
+
+    // don't want use kotlin serialization here because I don't need Json
+    fun serialize() = "($name:$payNow:$paid)"
+
+    companion object {
+        fun unserialize(saved: String): ActionType {
+            if (saved.isEmpty()) {
+                return NoAction()
+            }
+            val list = saved.splitItems(':')
+            require(list.size == 3)
+            val name = list[0]
+            val payNow = list[1].toInt()
+            val paid = list[2].toInt()
+            return when {
+                name.isEmpty() -> NoAction()
+                name == "Fold" -> Fold()
+                name == "Check" -> Check(paid)
+                name.startsWith("Small") -> SmallBlind()
+                name.startsWith("Big") -> BigBlind()
+                name.startsWith("Bet") -> Bet(paid)
+                name.startsWith("Call") -> Call(paid,paid - payNow)
+                name.startsWith("Raise") -> Raise(paid,paid - payNow)
+                else -> throw IllegalArgumentException()
+            }
+        }
+    }
 }

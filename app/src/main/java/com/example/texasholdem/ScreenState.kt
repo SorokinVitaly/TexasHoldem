@@ -6,7 +6,7 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class ScreenState(
     val players: List<PlayerData>,
-    val communityCards: List<Card> = emptyList(),
+    val communityCards: List<Card>,
     val actionsAvailable: List<ActionType>,
     val bankChips: Int,
     val isActionAvailable: Boolean,
@@ -38,9 +38,4 @@ data class ScreenState(
         players.mapIndexed { i, player ->
             if (index == i) player.update() else player
         }
-
-    companion object {
-        fun isDealAvailable(players: List<PlayerData>): Boolean =
-            players.first().isActive && players.count { it.isActive } > 1
-    }
 }

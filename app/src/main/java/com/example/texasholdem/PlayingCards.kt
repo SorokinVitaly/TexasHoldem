@@ -55,6 +55,33 @@ data class Card(
 
     override fun compareTo(other: Card): Int =
         compareValuesBy(this, other, { it.rank }, { it.suit })
+
+    fun serialize() = "(${rank.ordinal}:${suit.ordinal})"
+
+    companion object {
+        fun unserialize(saved: String): Card {
+            val items = saved.splitItems(':')
+            require(items.size == 2)
+            return Card(
+                CardRank.entries[items[0].toInt()],
+                CardSuit.entries[items[1].toInt()]
+            )
+        }
+
+        fun serializeList(list: List<Card>): String =
+            if (list.isEmpty()) {
+                ""
+            } else {
+                list.joinToString(prefix = "[", postfix = "]") { it.serialize() }
+            }
+
+        fun unserializeList(saved: String): List<Card> =
+            if (saved.isEmpty()) {
+                emptyList()
+            } else {
+                saved.splitItems().map { unserialize(it) }
+            }
+        }
 }
 
 private val jokerCard = Card(CardRank.JOKER)

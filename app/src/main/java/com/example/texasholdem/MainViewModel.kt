@@ -35,6 +35,20 @@ class MainViewModel @Inject constructor(
     private val preFlopStrength = arrayOfNulls<HandStrength?>(6)
     private val preCalculatedData = arrayOfNulls<PreCalculatedData?>(6)
 
+    init {
+        if (localData.isGameStarted) {
+            viewModelScope.launch {
+                _state.update { it.copy(isActionAvailable = false) }
+                if (round == RoundType.PRE_FLOP) {
+                    preCalculatePreFlop()
+                } else {
+                    preCalculateData()
+                }
+                mainGameLoop()
+            }
+        }
+    }
+
     fun onResetGame() {
         viewModelScope.launch {
             localData.resetGame()
@@ -46,38 +60,40 @@ class MainViewModel @Inject constructor(
 
     fun onDialNext() {
         viewModelScope.launch {
+            val dealerIndex = nextInGameIndex(localData.dealerIndex)
+            localData.dealerIndex = dealerIndex
             _state.update {
                 it.copy(
                     communityCards = emptyList(),
                     actionsAvailable = emptyList(),
                     bankChips = 0,
-                    isActionAvailable = true,
+                    isActionAvailable = false,
                     isDealAvailable = true,
                     isResetAvailable = true,
                     isCardsOpen = false,
-                    players = it.players.map { player ->
+                    players = it.players.mapIndexed { i, player ->
                         player.copy(
                             cards = emptyList(),
-                            lastBet = ActionType.NoAction()
+                            lastBet = ActionType.NoAction(),
+                            isDialer = i == dealerIndex
                         )
                     }
                 )
             }
-            localData.isResetAvailable = true
-            localData.isGameStarted = true
-            val dealerIndex = nextInGameIndex(localData.dealerIndex)
-            localData.dealerIndex = dealerIndex
-            _state.update { it.copy(isActionAvailable = false) }
-            _state.update { it.updatePlayer(dealerIndex) { setDialer() } }
             currentBet = 0
             numOfRaise = 0
             playerIndex = dealerIndex
             round = RoundType.PRE_FLOP
             history.clear()
             history.startRound()
-            newDeck()
+            if (deck.size != 52) {
+                newDeck()
+            }
             saveSnapshot()
             dealingCards()
+            localData.isResetAvailable = true
+            localData.isGameStarted = true
+            preCalculatePreFlop()
             payBlinds()
             mainGameLoop()
         }
@@ -87,6 +103,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isActionAvailable = false) }
             applyAction(0, action)
+            saveSnapshot()
             mainGameLoop()
         }
     }
@@ -157,6 +174,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun gameOver() {
+        localData.isGameStarted = false
         _state.update { it.copy(
             actionsAvailable = emptyList(),
             isActionAvailable = true,
@@ -227,6 +245,14 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private fun preCalculatePreFlop() {
+        repeat(6) { index ->
+            if (index > 0 && player(index).isActive) {
+                preFlopStrength[index] = preFlopStrength(player(index).cards)
+            }
+        }
+    }
+
     private suspend fun preCalculateData() = coroutineScope {
         val community = _state.value.communityCards
         val opponentsCount = _state.value.players.count { it.isInGame } - 1
@@ -271,11 +297,6 @@ class MainViewModel @Inject constructor(
                     val card = deck.removeAt(deck.lastIndex)
                     _state.update { it.updatePlayer(index) { addCard(card) } }
                 }
-            }
-        }
-        repeat(6) { index ->
-            if (index > 0 && player(index).isActive) {
-                preFlopStrength[index] = preFlopStrength(player(index).cards)
             }
         }
     }
@@ -439,6 +460,7 @@ class MainViewModel @Inject constructor(
         localData.playerIndex = playerIndex
         localData.round = round.ordinal
         localData.deck = Card.serializeList(deck)
+        localData.history = history.serialize()
     }
 
     private fun restoreSnapshot(): SavedState {
@@ -518,8 +540,7 @@ class MainViewModel @Inject constructor(
     private fun loadSavedState(): SavedState =
         try {
             restoreSnapshot()
-        }
-        catch(_: Exception) {
+        } catch(_: Exception) {
             log("Local data is broken. Game was restarted")
             localData.resetGame()
             restoreSnapshot()

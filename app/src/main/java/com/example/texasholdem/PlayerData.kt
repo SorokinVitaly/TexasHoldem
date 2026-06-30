@@ -1,6 +1,5 @@
 package com.example.texasholdem
 
-
 data class PlayerData(
     val name: String,
     val cards: List<Card> = emptyList(),
@@ -14,5 +13,4 @@ data class PlayerData(
     fun payChips(payed: Int) = copy(chips = chips - payed)
     fun clearCards() = copy(cards = emptyList())
     fun addCard(card: Card) = copy(cards = cards + card)
-    fun setDialer() = copy(isDialer = true)
 }

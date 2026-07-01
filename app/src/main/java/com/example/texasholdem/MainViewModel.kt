@@ -36,7 +36,9 @@ class MainViewModel @Inject constructor(
     private val preCalculatedData = arrayOfNulls<PreCalculatedData?>(6)
 
     init {
-        if (localData.isGameStarted) {
+        if (localData.isGameStarted &&
+            state.value.players.all { it.cards.size == 2 || !it.isActive }
+        ) {
             viewModelScope.launch {
                 _state.update { it.copy(isActionAvailable = false) }
                 if (round == RoundType.PRE_FLOP) {
@@ -60,39 +62,20 @@ class MainViewModel @Inject constructor(
 
     fun onDialNext() {
         viewModelScope.launch {
-            val dealerIndex = nextInGameIndex(localData.dealerIndex)
-            localData.dealerIndex = dealerIndex
-            _state.update {
-                it.copy(
-                    communityCards = emptyList(),
-                    actionsAvailable = emptyList(),
-                    bankChips = 0,
-                    isActionAvailable = false,
-                    isDealAvailable = true,
-                    isResetAvailable = true,
-                    isCardsOpen = false,
-                    players = it.players.mapIndexed { i, player ->
-                        player.copy(
-                            cards = emptyList(),
-                            lastBet = ActionType.NoAction(),
-                            isDialer = i == dealerIndex
-                        )
-                    }
-                )
-            }
+            localData.isResetAvailable = true
+            localData.isGameStarted = true
             currentBet = 0
             numOfRaise = 0
-            playerIndex = dealerIndex
+            playerIndex = localData.dealerIndex
             round = RoundType.PRE_FLOP
             history.clear()
             history.startRound()
             if (deck.size != 52) {
                 newDeck()
             }
+            initialState()
             saveSnapshot()
             dealingCards()
-            localData.isResetAvailable = true
-            localData.isGameStarted = true
             preCalculatePreFlop()
             payBlinds()
             mainGameLoop()
@@ -105,6 +88,27 @@ class MainViewModel @Inject constructor(
             applyAction(0, action)
             saveSnapshot()
             mainGameLoop()
+        }
+    }
+
+    private fun initialState() {
+        _state.update {
+            it.copy(
+                communityCards = emptyList(),
+                actionsAvailable = emptyList(),
+                bankChips = 0,
+                isActionAvailable = false,
+                isDealAvailable = true,
+                isResetAvailable = true,
+                isCardsOpen = false,
+                players = it.players.mapIndexed { i, player ->
+                    player.copy(
+                        cards = emptyList(),
+                        lastBet = ActionType.NoAction(),
+                        isDialer = i == localData.dealerIndex
+                    )
+                }
+            )
         }
     }
 
@@ -174,6 +178,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun gameOver() {
+        localData.dealerIndex = nextInGameIndex(localData.dealerIndex)
         localData.isGameStarted = false
         _state.update { it.copy(
             actionsAvailable = emptyList(),
@@ -181,6 +186,7 @@ class MainViewModel @Inject constructor(
             isDealAvailable = true,
             isResetAvailable = true
         ) }
+        saveSnapshot()
     }
 
     private suspend fun endRound(): Boolean {
@@ -196,6 +202,7 @@ class MainViewModel @Inject constructor(
             return true
         }
         dealingCommunity(if (round == RoundType.PRE_FLOP) 3 else 1)
+        preCalculateData()
         round = newRound
         playerIndex = localData.dealerIndex
         numOfRaise = 0
@@ -307,7 +314,6 @@ class MainViewModel @Inject constructor(
             val card = deck.removeAt(deck.lastIndex)
             _state.update { it.copy(communityCards = it.communityCards + card) }
         }
-        preCalculateData()
     }
 
     private suspend fun payBlinds() {

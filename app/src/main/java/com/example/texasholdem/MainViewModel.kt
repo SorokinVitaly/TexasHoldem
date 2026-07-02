@@ -422,10 +422,8 @@ class MainViewModel @Inject constructor(
 
     private fun player(index: Int) = _state.value.players[index]
 
-    private fun saveState() =
-        saveSnapshot(
-            localData,
-            history,
+    private fun saveState() {
+        val savedState = SavedState(
             state.value,
             currentBet,
             numOfRaise,
@@ -433,6 +431,8 @@ class MainViewModel @Inject constructor(
             round,
             deck
         )
+        saveSnapshot(localData, history, savedState)
+    }
 
     private fun loadSavedState(): SavedState =
         try {

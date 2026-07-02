@@ -55,13 +55,13 @@ fun saveSnapshot(
         communityCards = Card.serializeList(savedState.screenState.communityCards)
         bankChips = savedState.screenState.bankChips
         isResetAvailable = savedState.screenState.isResetAvailable
+        currentBet = savedState.currentBet
+        numOfRaise = savedState.numOfRaise
+        playerIndex = savedState.playerIndex
+        round = savedState.round.ordinal
+        deck = Card.serializeList(savedState.deck)
+        localData.history = history.serialize()
     }
-    localData.currentBet = savedState.currentBet
-    localData.numOfRaise = savedState.numOfRaise
-    localData.playerIndex = savedState.playerIndex
-    localData.round = savedState.round.ordinal
-    localData.deck = Card.serializeList(savedState.deck)
-    localData.history = history.serialize()
 }
 
 fun restoreSnapshot(

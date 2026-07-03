@@ -76,7 +76,7 @@ fun restoreSnapshot(
             cards = Card.unserializeList(player0Cards),
             chips = player0Chips,
             isActive = player0IsActive,
-            isDialer = dealerIndex == 0,
+            isDealer = dealerIndex == 0,
             lastBet = ActionType.unserialize(player0LastBet)
         )
         val player1 = PlayerData(
@@ -84,7 +84,7 @@ fun restoreSnapshot(
             cards = Card.unserializeList(player1Cards),
             chips = player1Chips,
             isActive = player1IsActive,
-            isDialer = dealerIndex == 1,
+            isDealer = dealerIndex == 1,
             lastBet = ActionType.unserialize(player1LastBet)
         )
         val player2 = PlayerData(
@@ -92,7 +92,7 @@ fun restoreSnapshot(
             cards = Card.unserializeList(player2Cards),
             chips = player2Chips,
             isActive = player2IsActive,
-            isDialer = dealerIndex == 2,
+            isDealer = dealerIndex == 2,
             lastBet = ActionType.unserialize(player2LastBet)
         )
         val player3 = PlayerData(
@@ -100,7 +100,7 @@ fun restoreSnapshot(
             cards = Card.unserializeList(player3Cards),
             chips = player3Chips,
             isActive = player3IsActive,
-            isDialer = dealerIndex == 3,
+            isDealer = dealerIndex == 3,
             lastBet = ActionType.unserialize(player3LastBet)
         )
         val player4 = PlayerData(
@@ -108,7 +108,7 @@ fun restoreSnapshot(
             cards = Card.unserializeList(player4Cards),
             chips = player4Chips,
             isActive = player4IsActive,
-            isDialer = dealerIndex == 4,
+            isDealer = dealerIndex == 4,
             lastBet = ActionType.unserialize(player4LastBet)
         )
         val player5 = PlayerData(
@@ -116,7 +116,7 @@ fun restoreSnapshot(
             cards = Card.unserializeList(player5Cards),
             chips = player5Chips,
             isActive = player5IsActive,
-            isDialer = dealerIndex == 5,
+            isDealer = dealerIndex == 5,
             lastBet = ActionType.unserialize(player5LastBet)
         )
         ScreenState(

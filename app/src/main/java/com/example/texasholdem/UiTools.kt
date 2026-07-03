@@ -57,7 +57,7 @@ fun Player(
         Cards(playerData.cards, isCardsOpen)
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (playerData.isDialer) {
+            if (playerData.isDealer) {
                 DealerButton()
             }
             ChipIcon()

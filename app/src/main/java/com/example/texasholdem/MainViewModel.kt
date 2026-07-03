@@ -60,7 +60,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onDialNext() {
+    fun onDealNext() {
         viewModelScope.launch {
             localData.isResetAvailable = true
             localData.isGameStarted = true
@@ -107,7 +107,7 @@ class MainViewModel @Inject constructor(
                     player.copy(
                         cards = emptyList(),
                         lastBet = ActionType.NoAction(),
-                        isDialer = i == localData.dealerIndex
+                        isDealer = i == localData.dealerIndex
                     )
                 }
             )
@@ -180,14 +180,21 @@ class MainViewModel @Inject constructor(
     }
 
     private fun gameOver() {
+        val isPlayerActive = state.value.players.map { it.chips >= BIG_BLIND }
+        val isDealAvailable = isPlayerActive[0] && isPlayerActive.count { it } > 1
+        _state.update {
+            it.copy(
+                actionsAvailable = emptyList(),
+                isActionAvailable = true,
+                isDealAvailable = isDealAvailable,
+                isResetAvailable = true,
+                players = it.players.mapIndexed { i, player ->
+                    player.copy(isActive = isPlayerActive[i])
+                }
+            )
+        }
         localData.dealerIndex = nextPlayerIndex(localData.dealerIndex) { isActive }
         localData.isGameStarted = false
-        _state.update { it.copy(
-            actionsAvailable = emptyList(),
-            isActionAvailable = true,
-            isDealAvailable = true,
-            isResetAvailable = true
-        ) }
         saveState()
     }
 

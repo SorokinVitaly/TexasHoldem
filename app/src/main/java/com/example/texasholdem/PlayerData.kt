@@ -5,7 +5,7 @@ data class PlayerData(
     val cards: List<Card> = emptyList(),
     val chips: Int = 0,
     val isActive: Boolean,
-    val isDialer: Boolean = false,
+    val isDealer: Boolean = false,
     val lastBet: ActionType = ActionType.NoAction()
 ) {
     val isInGame = isActive && lastBet !is ActionType.Fold

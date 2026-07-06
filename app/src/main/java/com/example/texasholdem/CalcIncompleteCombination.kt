@@ -20,8 +20,15 @@ fun calcIncompleteCombinationFiveCards(
     combination: Combination
 ): IncompleteCombination {
     require(cards.size == 5)
-    if (combination.type >= CombinationType.TWO_PAIRS) {
+    if (combination.type >= CombinationType.TWO_PAIRS ||
+        (combination.type == CombinationType.PAIR && combination.highRank >= CardRank.EIGHT)) {
         return IncompleteCombination()
+    }
+    findFourToStraightFlush(cards)?.let {
+        return IncompleteCombination(IncompleteCombinationType.FOUR_TO_STRAIGHT_FLUSH, it)
+    }
+    findThreeToStraightFlush(cards)?.let {
+        return IncompleteCombination(IncompleteCombinationType.THREE_TO_STRAIGHT_FLUSH, it)
     }
     findFourToFlush(cards)?.let {
         return IncompleteCombination(IncompleteCombinationType.FOUR_TO_FLUSH, it)
@@ -29,14 +36,8 @@ fun calcIncompleteCombinationFiveCards(
     findFourToStraightOpen(cards)?.let {
         return IncompleteCombination(IncompleteCombinationType.FOUR_TO_STRAIGHT_OPEN, it)
     }
-    if (combination.type == CombinationType.PAIR) {
-        return IncompleteCombination()
-    }
     findFourToStraight(cards)?.let {
         return IncompleteCombination(IncompleteCombinationType.FOUR_TO_STRAIGHT, it)
-    }
-    findThreeToStraightFlush(cards)?.let {
-        return IncompleteCombination(IncompleteCombinationType.THREE_TO_STRAIGHT_FLUSH, it)
     }
     return IncompleteCombination()
 }
@@ -58,7 +59,20 @@ fun calcIncompleteCombinationSixCards(
     return bestCombination
 }
 
-// Functions to find incomplete combination. Return members or null
+// Functions to find incomplete combination. Return set of cards to draw or null
+private fun findFourToStraightFlush(cards: List<Card>): List<Card>? {
+    val sameSuitCards = findSameSuit(cards, 4) ?: return null
+    return if (sameSuitCards[3].rank.ordinal - sameSuitCards[0].rank.ordinal != 3 ||
+        sameSuitCards[3].rank == CardRank.ACE
+    ) null else sameSuitCards
+}
+
+private fun findThreeToStraightFlush(cards: List<Card>): List<Card>? {
+    val sameSuitCards = findSameSuit(cards, 3) ?: return null
+    return if (sameSuitCards[2].rank.ordinal - sameSuitCards[0].rank.ordinal != 2) null
+    else sameSuitCards
+}
+
 private fun findFourToFlush(cards: List<Card>): List<Card>? {
     val sameSuitCards = findSameSuit(cards, 4) ?: return null
     return sameSuitCards
@@ -66,7 +80,7 @@ private fun findFourToFlush(cards: List<Card>): List<Card>? {
 
 private fun findFourToStraightOpen(cards: List<Card>): List<Card>? {
     for (skip in cards) {
-        val remaining = cards.filter { it != skip }
+        val remaining = cards - skip
         val firstCard = remaining[0]
         val ordinalList = remaining.map { it.rank.ordinal - firstCard.rank.ordinal }
         if (ordinalList == listOf(0, 1, 2, 3) && remaining[3].rank != CardRank.ACE) {
@@ -78,24 +92,21 @@ private fun findFourToStraightOpen(cards: List<Card>): List<Card>? {
 
 private fun findFourToStraight(cards: List<Card>): List<Card>? {
     for (skip in cards) {
-        val remaining = cards.filter { it != skip }
-        if (remaining[3].rank.ordinal - remaining[0].rank.ordinal <= 4) return remaining
-        if (remaining[3].rank == CardRank.ACE && remaining[2].rank <= CardRank.FIVE) return remaining
+        val remaining = (cards - skip)
+        val ranks = remaining.map { it.rank }
+        if (ranks[3].ordinal - ranks[0].ordinal <= 4) return remaining
+        if (ranks[3] == CardRank.ACE && ranks[2] <= CardRank.FIVE) return remaining
     }
     return null
 }
 
-private fun findThreeToStraightFlush(cards: List<Card>): List<Card>? {
-    val sameSuitCards = findSameSuit(cards, 3) ?: return null
-    return if (sameSuitCards[2].rank.ordinal - sameSuitCards[0].rank.ordinal > 4) null
-    else sameSuitCards
-}
-
 private fun findSameSuit(cards: List<Card>, numCards: Int ): List<Card>? {
-    for (i in 0 until 5 - numCards) {
-        val testList = cards.filter { it.suit == cards[i].suit }
-        if (testList.size == numCards) {
-            return testList
+    require(numCards > 1)
+    val lastIndex = 5 - numCards
+    for (i in 0..lastIndex) {
+        val sameSuitCards = cards.filter { it.suit == cards[i].suit }
+        if (sameSuitCards.size == numCards) {
+            return sameSuitCards
         }
     }
     return null

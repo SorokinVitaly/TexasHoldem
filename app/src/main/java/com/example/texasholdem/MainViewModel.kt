@@ -409,7 +409,10 @@ class MainViewModel @Inject constructor(
             val payToCall = currentBet - prevPaid
             val potOdds = if (bankChips + payToCall == 0) 0f
             else payToCall.toFloat() / (bankChips + payToCall)
+            log("bankChips = $bankChips, payToCall = $payToCall, potOdds = $potOdds")
             val hasStrongDraw = data.incompleteCombination.type >= IncompleteCombinationType.FOUR_TO_STRAIGHT_OPEN
+
+
             equityToStrength(data.equity, potOdds) to hasStrongDraw
         }
 

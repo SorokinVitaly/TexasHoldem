@@ -4,6 +4,7 @@ class SavedState(
     val screenState: ScreenState,
     val currentBet: Int,
     val numOfRaise: Int,
+    val numOfCall: Int,
     val playerIndex: Int,
     val round: RoundType,
     val deck: List<Card>,
@@ -57,6 +58,7 @@ fun saveSnapshot(
         isResetAvailable = savedState.screenState.isResetAvailable
         currentBet = savedState.currentBet
         numOfRaise = savedState.numOfRaise
+        numOfCall = savedState.numOfCall
         playerIndex = savedState.playerIndex
         round = savedState.round.ordinal
         deck = Card.serializeList(savedState.deck)
@@ -120,7 +122,7 @@ fun restoreSnapshot(
             lastBet = ActionType.unserialize(player5LastBet)
         )
         val players = listOf(player0, player1, player2, player3, player4, player5)
-        val isDealAvailable = player0.isActive && players.count { it.isActive } > 1
+        val isDealAvailable = player0.isActive && players.count { it.isActive } > 2
         ScreenState(
             players = players,
             communityCards = Card.unserializeList(communityCards),
@@ -137,6 +139,7 @@ fun restoreSnapshot(
         screenState = screenState,
         currentBet = localData.currentBet,
         numOfRaise = localData.numOfRaise,
+        numOfCall = localData.numOfCall,
         playerIndex = localData.playerIndex,
         round = RoundType.entries[localData.round],
         deck = Card.unserializeList(localData.deck)

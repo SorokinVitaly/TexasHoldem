@@ -1,101 +1,107 @@
 package com.example.texasholdem
 
+import kotlin.random.Random
+
+
 enum class BettingStrategy {
     DROP,
     PASSIVE,
     AGGRESSIVE
 }
 
-data class TableFactor(
-    val numOfRaise: Int,
-    val isLatePosition: Boolean,
-    val isFacingBet: Boolean,
-    val semiBluffPotential: Boolean,
-    val tableIsAggressive: Boolean,
-    val tableIsPassive: Boolean
-)
-
-fun preFlopStrength(pocket: List<Card>): HandStrength {
-    val (c1, c2) = pocket
-    val isPair = c2.rank == c1.rank
-    val gap = c2.rank.ordinal - c1.rank.ordinal
-
-    when {
-        isPair && c2.rank >= CardRank.TEN ->                    return HandStrength.MONSTER
-        isPair && c2.rank >= CardRank.SEVEN ->                  return HandStrength.STRONG
-        c2.rank == CardRank.ACE && c1.rank >= CardRank.TEN ->   return HandStrength.STRONG
-        isPair ->                                               return HandStrength.MEDIUM
-        c2.rank >= CardRank.JACK && c1.rank >= CardRank.TEN ->  return HandStrength.MEDIUM
-    }
-    if (c1.suit == c2.suit) {
-        if (c2.rank == CardRank.ACE)                            return HandStrength.MEDIUM
-        if ((c2.rank == CardRank.KING && c1.rank >= CardRank.EIGHT) ||
-            (c1.rank >= CardRank.SIX && gap <= 2) || gap <= 1)  return HandStrength.DRAWING
-    }
-    return HandStrength.WEAK
+enum class TablePosition {
+    BTN,
+    SB,
+    BB,
+    UTG,
+    HJ,
+    CO
 }
 
-private const val MONSTER_EQUITY = 0.90f
-private const val VALUE_RAISE_EDGE = 0.30f
-private const val MEDIUM_EDGE = 0.10f
-private const val MARGINAL_CALL_EDGE = 0f
-
-fun equityToStrength(equity: Float, potOdds: Float): HandStrength {
-    val edge = equity - potOdds
-    return when {
-        equity >= MONSTER_EQUITY    -> HandStrength.MONSTER
-        edge >= VALUE_RAISE_EDGE    -> HandStrength.STRONG
-        edge >= MEDIUM_EDGE         -> HandStrength.MEDIUM
-        edge >= MARGINAL_CALL_EDGE  -> HandStrength.DRAWING
-        else                        -> HandStrength.WEAK
-    }
-}
-
-fun resolveStrategy(
-    strength: HandStrength,
-    tableFactor: TableFactor
+fun selectPreFlopStrategy(
+    handPercent: Float,
+    position: TablePosition,
+    numOfRaise: Int,
+    numOfCall: Int
 ): BettingStrategy {
-    val raiseThreshold = if (tableFactor.tableIsAggressive) 1 else 2
-    if (strength == HandStrength.MONSTER) {
-        return  BettingStrategy.AGGRESSIVE
+    val openThreshold = when (position) {
+        TablePosition.UTG -> 0.15f
+        TablePosition.HJ  -> 0.20f
+        TablePosition.CO  -> 0.27f
+        TablePosition.BTN -> 0.45f
+        TablePosition.SB  -> 0.35f
+        TablePosition.BB  -> 0.60f
     }
-    if (strength == HandStrength.STRONG) {
-        return if (!tableFactor.isFacingBet || tableFactor.numOfRaise < raiseThreshold) {
-            BettingStrategy.AGGRESSIVE
-        } else {
-            BettingStrategy.PASSIVE
-        }
-    }
-
-    val goodTableFactor = !tableFactor.isFacingBet &&
-            tableFactor.isLatePosition &&
-            tableFactor.numOfRaise == 0
-
-    if (strength == HandStrength.MEDIUM) {
-        if (goodTableFactor) {
-            return BettingStrategy.AGGRESSIVE
-        }
-        return if (!tableFactor.isFacingBet || tableFactor.numOfRaise < raiseThreshold) {
-            BettingStrategy.PASSIVE
-        } else {
-            BettingStrategy.DROP
-        }
-    }
-
-    if (strength == HandStrength.DRAWING) {
-        return if (!tableFactor.isFacingBet || tableFactor.numOfRaise == 0) {
-            BettingStrategy.PASSIVE
-        } else {
-            BettingStrategy.DROP
-        }
-    }
-
+    val raiseTightening = 1f - (numOfRaise * 0.30f).coerceIn(0f, 0.85f)
+    val callThreshold = openThreshold * raiseTightening
+    val raiseThreshold = callThreshold * 0.35f
+    val impliedOddsBonus = (numOfCall * 0.02f).coerceAtMost(0.06f)
+    val effectiveCallThreshold = callThreshold + impliedOddsBonus
     return when {
-        goodTableFactor &&
-                (tableFactor.semiBluffPotential ||
-                        tableFactor.tableIsPassive) -> BettingStrategy.AGGRESSIVE
-        !tableFactor.isFacingBet                    -> BettingStrategy.PASSIVE
-        else                                        -> BettingStrategy.DROP
+        handPercent <= raiseThreshold ->
+            mixedDecision(handPercent, raiseThreshold, AGGRESSIVE_MIX_WIDTH,
+                ifInside = BettingStrategy.AGGRESSIVE, ifOutside = BettingStrategy.PASSIVE)
+        handPercent <= effectiveCallThreshold ->
+            mixedDecision(handPercent, effectiveCallThreshold, PASSIVE_MIX_WIDTH,
+                ifInside = BettingStrategy.PASSIVE, ifOutside = BettingStrategy.DROP)
+        else -> BettingStrategy.DROP
+    }
+}
+
+fun selectPostFlopStrategy(
+    equity: Float,
+    isFacingBet: Boolean,
+    numOfRaise: Int,
+    position: TablePosition
+): BettingStrategy {
+    val random = Random.nextFloat()
+    val inPosition = position == TablePosition.BTN || position == TablePosition.CO
+    return when {
+        !isFacingBet && !inPosition -> when {
+            equity < 0.30f -> BettingStrategy.DROP
+            equity < 0.45f -> if (random < 0.8f) BettingStrategy.DROP else BettingStrategy.AGGRESSIVE
+            equity < 0.60f -> if (random < 0.5f) BettingStrategy.DROP else BettingStrategy.AGGRESSIVE
+            equity < 0.75f -> if (random < 0.2f) BettingStrategy.DROP else BettingStrategy.AGGRESSIVE
+            else           -> BettingStrategy.AGGRESSIVE
+        }
+        !isFacingBet && inPosition -> when {
+            equity < 0.25f -> BettingStrategy.DROP
+            equity < 0.40f -> if (random < 0.6f) BettingStrategy.DROP else BettingStrategy.AGGRESSIVE
+            equity < 0.55f -> if (random < 0.3f) BettingStrategy.DROP else BettingStrategy.AGGRESSIVE
+            equity < 0.70f -> if (random < 0.1f) BettingStrategy.DROP else BettingStrategy.AGGRESSIVE
+            else           -> BettingStrategy.AGGRESSIVE
+        }
+        numOfRaise == 0 && !inPosition -> when {
+            equity < 0.25f -> BettingStrategy.DROP
+            equity < 0.45f -> if (random < 0.2f) BettingStrategy.DROP else BettingStrategy.PASSIVE
+            equity < 0.65f -> if (random < 0.8f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+            equity < 0.80f -> if (random < 0.4f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+            else           -> BettingStrategy.AGGRESSIVE
+        }
+        numOfRaise == 0 && inPosition -> when {
+            equity < 0.20f -> BettingStrategy.DROP
+            equity < 0.40f -> if (random < 0.1f) BettingStrategy.DROP else BettingStrategy.PASSIVE
+            equity < 0.60f -> if (random < 0.6f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+            equity < 0.75f -> if (random < 0.2f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+            else           -> BettingStrategy.AGGRESSIVE
+        }
+        numOfRaise == 1 && !inPosition -> when {
+            equity < 0.40f -> BettingStrategy.DROP
+            equity < 0.60f -> if (random < 0.2f) BettingStrategy.DROP else BettingStrategy.PASSIVE
+            equity < 0.80f -> if (random < 0.7f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+            else           -> if (random < 0.2f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+        }
+        numOfRaise == 1 && inPosition -> when {
+            equity < 0.35f -> BettingStrategy.DROP
+            equity < 0.55f -> if (random < 0.1f) BettingStrategy.DROP else BettingStrategy.PASSIVE
+            equity < 0.75f -> if (random < 0.6f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+            else           -> if (random < 0.2f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+        }
+        else -> when {
+            equity < 0.55f -> BettingStrategy.DROP
+            equity < 0.75f -> BettingStrategy.PASSIVE
+            else           -> if (random < 0.7f) BettingStrategy.PASSIVE else BettingStrategy.AGGRESSIVE
+        }
     }
 }
 
@@ -113,3 +119,24 @@ fun resolveAction(
     availableActions.find { it is ActionType.Check }?.let { return it }
     return ActionType.Fold()
 }
+
+private fun mixedDecision(
+    handPercent: Float,
+    threshold: Float,
+    mixWidth: Float,
+    ifInside: BettingStrategy,
+    ifOutside: BettingStrategy
+): BettingStrategy {
+    val distanceFromThreshold = threshold - handPercent
+    return when {
+        distanceFromThreshold > mixWidth  -> ifInside
+        distanceFromThreshold < -mixWidth -> ifOutside
+        else -> {
+            val probabilityInside = (distanceFromThreshold + mixWidth) / (2 * mixWidth)
+            if (Random.nextFloat() < probabilityInside) ifInside else ifOutside
+        }
+    }
+}
+
+private const val AGGRESSIVE_MIX_WIDTH = 0.04f
+private const val PASSIVE_MIX_WIDTH = 0.06f

@@ -51,6 +51,7 @@ interface LocalDataRepository {
     var isResetAvailable: Boolean
     var currentBet: Int
     var numOfRaise: Int
+    var numOfCall: Int
     var playerIndex: Int
     var round: Int
 
@@ -223,6 +224,10 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
         ::numOfRaise.name,
         0
     )
+    override var numOfCall: Int by PreferencesDelegate(
+        ::numOfCall.name,
+        0
+    )
     override var playerIndex: Int by PreferencesDelegate(
         ::playerIndex.name,
         0
@@ -270,6 +275,7 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
         isResetAvailable = false
         currentBet = 0
         numOfRaise = 0
+        numOfCall = 0
         playerIndex = 0
         round = 0
     }

@@ -30,10 +30,12 @@ class MainViewModel @Inject constructor(
     private val deck = savedState.deck.toMutableList()
     private var currentBet = savedState.currentBet
     private var numOfRaise = savedState.numOfRaise
+    private var numOfCall = savedState.numOfCall
     private var playerIndex = savedState.playerIndex
     private var round = savedState.round
-    private val preFlopStrength = arrayOfNulls<HandStrength?>(6)
+    private val tablePositions = arrayOfNulls<TablePosition?>(6)
     private val preCalculatedData = arrayOfNulls<PreCalculatedData?>(6)
+    private val chenAnalyzer = ChenAnalyzer()
 
     init {
         if (localData.isGameStarted &&
@@ -41,9 +43,8 @@ class MainViewModel @Inject constructor(
         ) {
             viewModelScope.launch {
                 _state.update { it.copy(isActionAvailable = false) }
-                if (round == RoundType.PRE_FLOP) {
-                    preCalculatePreFlop()
-                } else {
+                calculatePositions()
+                if (round != RoundType.PRE_FLOP) {
                     preCalculateData()
                 }
                 mainGameLoop()
@@ -66,6 +67,7 @@ class MainViewModel @Inject constructor(
             localData.isGameStarted = true
             currentBet = 0
             numOfRaise = 0
+            numOfCall = 0
             playerIndex = localData.dealerIndex
             round = RoundType.PRE_FLOP
             history.clear()
@@ -78,7 +80,7 @@ class MainViewModel @Inject constructor(
             initialState()
             saveState()
             dealingCards()
-            preCalculatePreFlop()
+            calculatePositions()
             payBlinds()
             mainGameLoop()
         }
@@ -116,9 +118,9 @@ class MainViewModel @Inject constructor(
 
     private suspend fun mainGameLoop() {
         while (true) {
-            val inGamePlayers = _state.value.players.filter { it.isInGame }
+            val inGamePlayers = state.value.players.filter { it.isInGame }
             if (inGamePlayers.size == 1) {
-                takeBank(listOf(_state.value.players.indexOfFirst { it.isInGame }))
+                takeBank(listOf(state.value.players.indexOfFirst { it.isInGame }))
                 gameOver()
                 return
             }
@@ -150,14 +152,14 @@ class MainViewModel @Inject constructor(
     private suspend fun takeBank(winIndexes: List<Int>) {
         require(winIndexes.isNotEmpty())
         val winnersNames = winIndexes.joinToString { player(it).name }
-        logAndShow("$winnersNames won and take bank ${_state.value.bankChips} chips")
+        logAndShow("$winnersNames won and take bank ${state.value.bankChips} chips")
 
         fun take(index: Int, amount: Int) {
             _state.update { it.takeFromBank(index, amount) }
         }
 
         val numWinners = winIndexes.size
-        val part = _state.value.bankChips / numWinners
+        val part = state.value.bankChips / numWinners
         if (part > 0) {
             winIndexes.forEach { index ->
                 take(index, part)
@@ -166,14 +168,14 @@ class MainViewModel @Inject constructor(
 
         val winIndexesFirst = winIndexes.filter { it > localData.dealerIndex }
         winIndexesFirst.forEach { index ->
-            if (_state.value.bankChips > 0) {
+            if (state.value.bankChips > 0) {
                 take(index, 1)
             }
         }
 
         val winIndexesLast = winIndexes.filter { it <= localData.dealerIndex }
         winIndexesLast.forEach { index ->
-            if (_state.value.bankChips > 0) {
+            if (state.value.bankChips > 0) {
                 take(index, 1)
             }
         }
@@ -215,6 +217,7 @@ class MainViewModel @Inject constructor(
         round = newRound
         playerIndex = localData.dealerIndex
         numOfRaise = 0
+        numOfCall = 0
         currentBet = 0
         history.startRound()
         clearBets()
@@ -223,7 +226,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun endRiverRound() {
         _state.update { it.copy(isCardsOpen = true) }
-        val inGameCombinations = _state.value.players.mapIndexedNotNull { i, playerData ->
+        val inGameCombinations = state.value.players.mapIndexedNotNull { i, playerData ->
             if (playerData.isInGame) {
                 val data = preCalculatedData[i]
                 requireNotNull(data)
@@ -271,18 +274,30 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private suspend fun preCalculatePreFlop() =
-        forEachActivePlayer { index ->
-            if (index > 0) {
-                preFlopStrength[index] = preFlopStrength(cards)
-            }
+    private fun calculatePositions() {
+        val availablePositions = TablePosition.entries.toMutableList()
+        val numPlayers = state.value.players.count { it.isActive }
+        if (numPlayers < 6) {
+            availablePositions.remove(TablePosition.HJ)
         }
-
+        if (numPlayers < 5) {
+            availablePositions.remove(TablePosition.UTG)
+        }
+        if (numPlayers < 4) {
+            availablePositions.remove(TablePosition.CO)
+        }
+        val iterator = availablePositions.iterator()
+        var index = localData.dealerIndex
+        while (iterator.hasNext()) {
+            tablePositions[index] = iterator.next()
+            index = nextPlayerIndex(index) { isActive }
+        }
+    }
 
     private suspend fun preCalculateData() = coroutineScope {
-        val community = _state.value.communityCards
-        val opponentsCount = _state.value.players.count { it.isInGame } - 1
-        _state.value.players.mapIndexedNotNull { i, playerData ->
+        val community = state.value.communityCards
+        val opponentsCount = state.value.players.count { it.isInGame } - 1
+        state.value.players.mapIndexedNotNull { i, playerData ->
             if (playerData.isInGame) {
                 launch {
                     val pocket = playerData.cards
@@ -301,6 +316,10 @@ class MainViewModel @Inject constructor(
                             equity = calcEquity(pocket, community, opponentsCount)
                         )
                     }
+                    if (i > 0) {
+                        log("postFlop $i: ${preCalculatedData[i]?.equity} $pocket $community")
+                    }
+
                 }
             } else {
                 null
@@ -386,6 +405,9 @@ class MainViewModel @Inject constructor(
         if (action is ActionType.Raise) {
             numOfRaise++
         }
+        if (action is ActionType.Call) {
+            numOfCall++
+        }
         if (action.paid > currentBet) {
             currentBet = action.paid
         }
@@ -397,46 +419,33 @@ class MainViewModel @Inject constructor(
     }
 
     private fun botBetting(index: Int, availableActions: List<ActionType>): ActionType {
-        val (strength, potentialBluff) = if (round == RoundType.PRE_FLOP) {
-            val preFlopStrength = preFlopStrength[index]
-            requireNotNull(preFlopStrength)
-            preFlopStrength to false
+        val position = tablePositions[index]
+        requireNotNull(position)
+
+        val strategy = if (round == RoundType.PRE_FLOP) {
+            val handPercent = chenAnalyzer.calcHandPercent(player(index).cards)
+
+            log("handPercent = $handPercent, pocket = ${player(index).cards}")
+
+            selectPreFlopStrategy(handPercent, position, numOfRaise, numOfCall)
         } else {
             val data = preCalculatedData[index]
             requireNotNull(data)
-            val bankChips = _state.value.bankChips
             val prevPaid = player(index).lastBet.paid
-            val payToCall = currentBet - prevPaid
-            val potOdds = if (bankChips + payToCall == 0) 0f
-            else payToCall.toFloat() / (bankChips + payToCall)
-            log("bankChips = $bankChips, payToCall = $payToCall, potOdds = $potOdds")
-            val hasStrongDraw = data.incompleteCombination.type >= IncompleteCombinationType.FOUR_TO_STRAIGHT_OPEN
-
-
-            equityToStrength(data.equity, potOdds) to hasStrongDraw
+            val isFacingBet = currentBet > prevPaid
+            selectPostFlopStrategy(data.equity, isFacingBet, numOfRaise, position)
         }
-
-        val playerCount = _state.value.players.count { it.isActive }
-        val positionFromDealer = (index - localData.dealerIndex - 1 + playerCount) % playerCount
-        val tableFactor = TableFactor(
-            numOfRaise = numOfRaise,
-            isLatePosition = positionFromDealer >= 2,
-            isFacingBet = currentBet > 0,
-            semiBluffPotential = potentialBluff,
-            tableIsAggressive = history.isAggressiveTable(),
-            tableIsPassive = history.isPassiveRound()
-        )
-        val strategy = resolveStrategy(strength, tableFactor)
         return resolveAction(strategy, availableActions)
     }
 
-    private fun player(index: Int) = _state.value.players[index]
+    private fun player(index: Int) = state.value.players[index]
 
     private fun saveState() {
         val savedState = SavedState(
             state.value,
             currentBet,
             numOfRaise,
+            numOfCall,
             playerIndex,
             round,
             deck

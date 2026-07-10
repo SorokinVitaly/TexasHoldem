@@ -316,10 +316,6 @@ class MainViewModel @Inject constructor(
                             equity = calcEquity(pocket, community, opponentsCount)
                         )
                     }
-                    if (i > 0) {
-                        log("postFlop $i: ${preCalculatedData[i]?.equity} $pocket $community")
-                    }
-
                 }
             } else {
                 null
@@ -419,19 +415,18 @@ class MainViewModel @Inject constructor(
     }
 
     private fun botBetting(index: Int, availableActions: List<ActionType>): ActionType {
+        val player = player(index)
         val position = tablePositions[index]
         requireNotNull(position)
 
         val strategy = if (round == RoundType.PRE_FLOP) {
-            val handPercent = chenAnalyzer.calcHandPercent(player(index).cards)
-
-            log("handPercent = $handPercent, pocket = ${player(index).cards}")
-
-            selectPreFlopStrategy(handPercent, position, numOfRaise, numOfCall)
+            val handPercent = chenAnalyzer.calcHandPercent(player.cards)
+            val isPaid = player.lastBet.paid > 0
+            selectPreFlopStrategy(handPercent, position, numOfRaise, numOfCall, isPaid)
         } else {
             val data = preCalculatedData[index]
             requireNotNull(data)
-            val prevPaid = player(index).lastBet.paid
+            val prevPaid = player.lastBet.paid
             val isFacingBet = currentBet > prevPaid
             selectPostFlopStrategy(data.equity, isFacingBet, numOfRaise, position)
         }

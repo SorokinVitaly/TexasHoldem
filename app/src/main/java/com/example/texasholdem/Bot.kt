@@ -18,36 +18,6 @@ enum class TablePosition {
     CO
 }
 
-fun selectPreFlopStrategy(
-    handPercent: Float,
-    position: TablePosition,
-    numOfRaise: Int,
-    numOfCall: Int
-): BettingStrategy {
-    val openThreshold = when (position) {
-        TablePosition.UTG -> 0.15f
-        TablePosition.HJ  -> 0.20f
-        TablePosition.CO  -> 0.27f
-        TablePosition.BTN -> 0.45f
-        TablePosition.SB  -> 0.35f
-        TablePosition.BB  -> 0.60f
-    }
-    val raiseTightening = 1f - (numOfRaise * 0.30f).coerceIn(0f, 0.85f)
-    val callThreshold = openThreshold * raiseTightening
-    val raiseThreshold = callThreshold * 0.35f
-    val impliedOddsBonus = (numOfCall * 0.02f).coerceAtMost(0.06f)
-    val effectiveCallThreshold = callThreshold + impliedOddsBonus
-    return when {
-        handPercent <= raiseThreshold ->
-            mixedDecision(handPercent, raiseThreshold, AGGRESSIVE_MIX_WIDTH,
-                ifInside = BettingStrategy.AGGRESSIVE, ifOutside = BettingStrategy.PASSIVE)
-        handPercent <= effectiveCallThreshold ->
-            mixedDecision(handPercent, effectiveCallThreshold, PASSIVE_MIX_WIDTH,
-                ifInside = BettingStrategy.PASSIVE, ifOutside = BettingStrategy.DROP)
-        else -> BettingStrategy.DROP
-    }
-}
-
 fun selectPostFlopStrategy(
     equity: Float,
     isFacingBet: Boolean,
@@ -119,24 +89,3 @@ fun resolveAction(
     availableActions.find { it is ActionType.Check }?.let { return it }
     return ActionType.Fold()
 }
-
-private fun mixedDecision(
-    handPercent: Float,
-    threshold: Float,
-    mixWidth: Float,
-    ifInside: BettingStrategy,
-    ifOutside: BettingStrategy
-): BettingStrategy {
-    val distanceFromThreshold = threshold - handPercent
-    return when {
-        distanceFromThreshold > mixWidth  -> ifInside
-        distanceFromThreshold < -mixWidth -> ifOutside
-        else -> {
-            val probabilityInside = (distanceFromThreshold + mixWidth) / (2 * mixWidth)
-            if (Random.nextFloat() < probabilityInside) ifInside else ifOutside
-        }
-    }
-}
-
-private const val AGGRESSIVE_MIX_WIDTH = 0.04f
-private const val PASSIVE_MIX_WIDTH = 0.06f

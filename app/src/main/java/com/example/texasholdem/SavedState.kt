@@ -8,6 +8,7 @@ class SavedState(
     val playerIndex: Int,
     val round: RoundType,
     val deck: List<Card>,
+    val statistics: Statistics
 )
 
 fun saveSnapshot(
@@ -62,6 +63,7 @@ fun saveSnapshot(
         playerIndex = savedState.playerIndex
         round = savedState.round.ordinal
         deck = Card.serializeList(savedState.deck)
+        statistics = savedState.statistics.serialize()
         localData.history = history.serialize()
     }
 }
@@ -142,6 +144,7 @@ fun restoreSnapshot(
         numOfCall = localData.numOfCall,
         playerIndex = localData.playerIndex,
         round = RoundType.entries[localData.round],
-        deck = Card.unserializeList(localData.deck)
+        deck = Card.unserializeList(localData.deck),
+        statistics = Statistics.unserialize(localData.statistics)
     )
 }

@@ -43,6 +43,7 @@ interface LocalDataRepository {
     var player5LastBet: String
 
     var history: String
+    var statistics: String
     var deck: String
     var communityCards: String
     var bankChips: Int
@@ -190,6 +191,10 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
 
     override var history: String by PreferencesDelegate(
         ::history.name,
+        ""
+    )
+    override var statistics: String by PreferencesDelegate(
+        ::statistics.name,
         ""
     )
     override var deck: String by PreferencesDelegate(

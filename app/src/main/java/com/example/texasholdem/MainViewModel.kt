@@ -27,6 +27,7 @@ class MainViewModel @Inject constructor(
     private val _events = MutableSharedFlow<UiEvent>()
     val events = _events.asSharedFlow()
 
+    private val statistics = savedState.statistics
     private val deck = savedState.deck.toMutableList()
     private var currentBet = savedState.currentBet
     private var numOfRaise = savedState.numOfRaise
@@ -423,6 +424,18 @@ class MainViewModel @Inject constructor(
             val handPercent = chenAnalyzer.calcHandPercent(player.cards)
             val isPaid = player.lastBet.paid > 0
             selectPreFlopStrategy(handPercent, position, numOfRaise, numOfCall, isPaid)
+
+
+
+
+            /*
+            1. Частота использования таблиц openRaise, oneLimper, manyLimper, oneRaise, oneRaisePaid, manyRaise, manyRaisePaid;
+            2. Для каждой таблицы: частота выбора стратегии, частота попадания корзин по handPercent;
+            3. Для каждой из 20 корзин по handPercent: частота выбора стратегии;
+            4. Для каждой позиции стола (BTN, SB, BB, UTG, HJ, CO): VPIP, RFR, частота попадания корзин по handPercent;
+            5. Матрица "позиция ? таблица";
+            */
+
         } else {
             val data = preCalculatedData[index]
             requireNotNull(data)
@@ -443,7 +456,8 @@ class MainViewModel @Inject constructor(
             numOfCall,
             playerIndex,
             round,
-            deck
+            deck,
+            statistics
         )
         saveSnapshot(localData, history, savedState)
     }

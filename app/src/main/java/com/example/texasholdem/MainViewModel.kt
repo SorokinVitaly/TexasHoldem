@@ -39,6 +39,7 @@ class MainViewModel @Inject constructor(
     private val chenAnalyzer = ChenAnalyzer()
 
     init {
+        log(statistics.toString())
         if (localData.isGameStarted &&
             state.value.players.all { it.cards.size == 2 || !it.isActive }
         ) {
@@ -420,30 +421,30 @@ class MainViewModel @Inject constructor(
         val position = tablePositions[index]
         requireNotNull(position)
 
-        val strategy = if (round == RoundType.PRE_FLOP) {
+        if (round == RoundType.PRE_FLOP) {
             val handPercent = chenAnalyzer.calcHandPercent(player.cards)
             val isPaid = player.lastBet.paid > 0
-            selectPreFlopStrategy(handPercent, position, numOfRaise, numOfCall, isPaid)
-
-
-
-
-            /*
-            1. Частота использования таблиц openRaise, oneLimper, manyLimper, oneRaise, oneRaisePaid, manyRaise, manyRaisePaid;
-            2. Для каждой таблицы: частота выбора стратегии, частота попадания корзин по handPercent;
-            3. Для каждой из 20 корзин по handPercent: частота выбора стратегии;
-            4. Для каждой позиции стола (BTN, SB, BB, UTG, HJ, CO): VPIP, RFR, частота попадания корзин по handPercent;
-            5. Матрица "позиция ? таблица";
-            */
-
+            val strategy = selectPreFlopStrategy(handPercent, position, numOfRaise, numOfCall, isPaid)
+            val action = resolveAction(strategy, availableActions)
+            statistics.registerEvent(
+                handPercent,
+                position,
+                numOfRaise,
+                numOfCall,
+                isPaid,
+                availableActions,
+                action,
+                strategy
+            )
+            return action
         } else {
             val data = preCalculatedData[index]
             requireNotNull(data)
             val prevPaid = player.lastBet.paid
             val isFacingBet = currentBet > prevPaid
-            selectPostFlopStrategy(data.equity, isFacingBet, numOfRaise, position)
+            val strategy = selectPostFlopStrategy(data.equity, isFacingBet, numOfRaise, position)
+            return resolveAction(strategy, availableActions)
         }
-        return resolveAction(strategy, availableActions)
     }
 
     private fun player(index: Int) = state.value.players[index]

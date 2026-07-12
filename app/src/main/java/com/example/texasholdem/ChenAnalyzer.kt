@@ -7,7 +7,8 @@ import kotlin.math.roundToInt
 
 class ChenAnalyzer {
     private val strength = Array(13) { IntArray(13) }
-    private val flatStrength = mutableListOf<Int>()
+    private val flatStrength: List<Int>
+    private val values: List<Int>
 
     init {
         for (high in CardRank.TWO.ordinal ..CardRank.ACE.ordinal) {
@@ -17,7 +18,16 @@ class ChenAnalyzer {
                 strength[high][low] = s
             }
         }
-        flatStrength.addAll(strength.flatMap { it.toList() }.sortedDescending())
+        flatStrength = strength.flatMap { it.toList() }.sortedDescending()
+        values = strength.flatMap { it.toList() }.sorted().distinct()
+    }
+
+    fun calcHandStrength(pocket: List<Card>): Int {
+        require(pocket.size == 2)
+        val (c1, c2) = pocket
+        val high = max(c1.rank.ordinal, c2.rank.ordinal)
+        val low =  min(c1.rank.ordinal, c2.rank.ordinal)
+        return if (c1.suit == c2.suit) strength[low][high] else strength[high][low]
     }
 
     fun calcHandPercent(pocket: List<Card>): Float {

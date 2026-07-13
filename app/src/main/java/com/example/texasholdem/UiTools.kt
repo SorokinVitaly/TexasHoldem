@@ -52,8 +52,6 @@ fun Player(
             color = Color.White
         )
 
-        Spacer(Modifier.height(8.dp))
-
         Cards(playerData.cards, isCardsOpen)
 
         Row(verticalAlignment = Alignment.CenterVertically) {

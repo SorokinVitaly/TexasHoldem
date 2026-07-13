@@ -70,7 +70,8 @@ fun saveSnapshot(
 
 fun restoreSnapshot(
     localData: LocalDataRepository,
-    history: History
+    history: History,
+    chenValues: List<ChenStrength>
 ): SavedState {
     history.unserialize(localData.history)
 
@@ -145,6 +146,6 @@ fun restoreSnapshot(
         playerIndex = localData.playerIndex,
         round = RoundType.entries[localData.round],
         deck = Card.unserializeList(localData.deck),
-        statistics = Statistics.unserialize(localData.statistics)
+        statistics = Statistics.unserialize(localData.statistics, chenValues)
     )
 }

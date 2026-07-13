@@ -1,14 +1,13 @@
 package com.example.texasholdem
 
-import kotlin.arrayOf
 
-class Statistics {
-    val tables = Array(7) { TableStatistics() }
-    val positions = Array(6) { PositionStatistics() }
-    val buckets = Array(20) { BucketStatistics() }
+class Statistics(val chenValues: List<ChenStrength>) {
+    private val tables = Array(7) { TableStatistics() }
+    private val positions = Array(6) { PositionStatistics() }
+    private val buckets = Array(27) { BucketStatistics() }
 
     fun registerEvent(
-        handPercent: Float,
+        handStrength: ChenStrength,
         position: TablePosition,
         numOfRaise: Int,
         numOfCall: Int,
@@ -27,7 +26,7 @@ class Statistics {
             numOfRaise >= 2 && isPaid -> 6
             else -> throw IllegalStateException("Wrong condition")
         }
-        val bucketIndex = (handPercent * 20f).toInt()
+        val bucketIndex = bucketIndex(handStrength)
         val positionIndex = position.ordinal
 
         val isCanRaise = availableActions.any { it is ActionType.Raise }
@@ -114,9 +113,37 @@ class Statistics {
             buckets.flatMap { it.toList() }
         ).joinToString()
 
+    private fun freq(count: Int, all: Int): String {
+        val frequency = if (all == 0) 0f else count.toFloat() / all * 100f
+        return "%7.3f".format(frequency)
+    }
+
+    private fun tableName(i: Int): String {
+        require(i in TABLE_NAMES.indices)
+        return "%-14s".format(TABLE_NAMES[i])
+    }
+
+    private fun positionName(i: Int): String {
+        require(i in TablePosition.entries.indices)
+        return "%-9s".format(TablePosition.entries[i].name)
+    }
+
+    private fun bucketName(i: Int): String {
+        require(i in 0..26)
+        return "%-6s".format("${chenValues[i]}")
+    }
+
+    private fun bucketIndex(handStrength: ChenStrength): Int {
+        val index = chenValues.indexOf(handStrength)
+        if (index < 0) {
+            throw IllegalStateException("handStrength not found")
+        }
+        return index
+    }
+
     companion object {
-        fun unserialize(saved: String): Statistics {
-            val statistics = Statistics()
+        fun unserialize(saved: String, chenValues: List<ChenStrength>): Statistics {
+            val statistics = Statistics(chenValues)
             if (saved.isEmpty()) {
                 return statistics
             }
@@ -136,26 +163,6 @@ class Statistics {
                     cursor += it.size
                 }
             }
-        }
-
-        fun freq(count: Int, all: Int): String {
-            val frequency = if (all == 0) 0f else count.toFloat() / all * 100f
-            return "%7.3f".format(frequency)
-        }
-
-        fun tableName(i: Int): String {
-            require(i in TABLE_NAMES.indices)
-            return "%-14s".format(TABLE_NAMES[i])
-        }
-
-        fun positionName(i: Int): String {
-            require(i in TablePosition.entries.indices)
-            return "%-9s".format(TablePosition.entries[i].name)
-        }
-
-        fun bucketName(i: Int): String {
-            require(i in 0..19)
-            return "%-6s".format("${i * 5}-${i * 5 + 5}")
         }
 
         private val TABLE_NAMES = arrayOf(
@@ -178,11 +185,12 @@ interface SubStatistics {
     val size: Int
     fun toList(): List<Int>
     fun fromList(list: List<Int>)
+    fun allUsage(): Int
 }
 
 class TableStatistics : SubStatistics {
-    override val size = 29
-    var buckets = IntArray(20)
+    override val size = 36
+    var buckets = IntArray(27)
     var positions = IntArray(6)
     var strategyAggressive = 0
     var strategyPassive = 0
@@ -193,19 +201,19 @@ class TableStatistics : SubStatistics {
 
     override fun fromList(list: List<Int>) {
         require(list.size == size)
-        buckets = list.subList(0, 20).toIntArray()
-        positions = list.subList(20, 26).toIntArray()
-        strategyAggressive = list[26]
-        strategyPassive = list[27]
-        strategyDrop = list[28]
+        buckets = list.subList(0, 27).toIntArray()
+        positions = list.subList(27, 33).toIntArray()
+        strategyAggressive = list[33]
+        strategyPassive = list[34]
+        strategyDrop = list[35]
     }
 
-    fun allUsage() = strategyDrop + strategyPassive + strategyAggressive
+    override fun allUsage() = strategyDrop + strategyPassive + strategyAggressive
 }
 
 class PositionStatistics : SubStatistics {
-    override val size = 24
-    var buckets = IntArray(20)
+    override val size = 31
+    var buckets = IntArray(27)
     var canRaise = 0
     var raised = 0
     var canPay = 0
@@ -215,14 +223,14 @@ class PositionStatistics : SubStatistics {
 
     override fun fromList(list: List<Int>) {
         require(list.size == size)
-        buckets = list.subList(0, 20).toIntArray()
-        canRaise = list[20]
-        raised = list[21]
-        canPay = list[22]
-        paid = list[23]
+        buckets = list.subList(0, 27).toIntArray()
+        canRaise = list[27]
+        raised = list[28]
+        canPay = list[29]
+        paid = list[30]
     }
 
-    fun allUsage() = buckets.sumOf { it }
+    override fun allUsage() = buckets.sumOf { it }
 }
 
 class BucketStatistics : SubStatistics {
@@ -240,5 +248,5 @@ class BucketStatistics : SubStatistics {
         strategyDrop = list[2]
     }
 
-    fun allUsage() = strategyDrop + strategyPassive + strategyAggressive
+    override fun allUsage() = strategyDrop + strategyPassive + strategyAggressive
 }

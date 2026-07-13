@@ -1,13 +1,13 @@
 package com.example.texasholdem
 
-data class Limits(val limitAggressive: Float, val limitPassive: Float) {
+data class Limits(val limitAggressive: ChenStrength, val limitPassive: ChenStrength) {
     init {
-        require(limitPassive == NEVER || limitPassive > limitAggressive)
+        require(limitPassive == NEVER || limitPassive < limitAggressive)
     }
 }
 
 fun selectPreFlopStrategy(
-    handPercent: Float,
+    handStrength: ChenStrength,
     position: TablePosition,
     numOfRaise: Int,
     numOfCall: Int,
@@ -25,13 +25,15 @@ fun selectPreFlopStrategy(
     }
     val limits = map[position.ordinal]
     return when {
-        handPercent <= limits.limitAggressive -> BettingStrategy.AGGRESSIVE
-        handPercent <= limits.limitPassive -> BettingStrategy.PASSIVE
+        handStrength >= limits.limitAggressive -> BettingStrategy.AGGRESSIVE
+        handStrength >= limits.limitPassive -> BettingStrategy.PASSIVE
         else -> BettingStrategy.DROP
     }
 }
 
-private const val NEVER = Float.NEGATIVE_INFINITY
+private const val ALWAYS = Int.MIN_VALUE
+private const val NEVER = Int.MAX_VALUE
+private val UNUSED = Limits(NEVER, NEVER)
 
 /* Values order:
     BTN,
@@ -42,64 +44,63 @@ private const val NEVER = Float.NEGATIVE_INFINITY
     CO
 */
 private val openRaise = arrayOf(
-    Limits(0.60f, NEVER),
-    Limits(0.35f, 0.60f),
-    Limits(NEVER, 1.00f),
-    Limits(0.20f, NEVER),
-    Limits(0.25f, NEVER),
-    Limits(0.35f, NEVER)
+    Limits(6, NEVER),
+    Limits(10, 6),
+    UNUSED,
+    Limits(13, NEVER),
+    Limits(12, NEVER),
+    Limits(10, NEVER)
 )
 
 private val oneLimper = arrayOf(
-    Limits(0.38f, 0.60f),
-    Limits(0.30f, 0.55f),
-    Limits(0.25f, 0.70f),
-    Limits(0.18f, 0.30f),
-    Limits(0.22f, 0.35f),
-    Limits(0.30f, 0.45f)
+    Limits(10, 6),
+    Limits(11, 7),
+    Limits(12, ALWAYS),
+    UNUSED,
+    Limits(13, 10),
+    Limits(11, 9)
 )
 
 private val manyLimper = arrayOf(
-    Limits(0.30f, 0.75f),
-    Limits(0.25f, 0.70f),
-    Limits(0.20f, 1.00f),
-    Limits(0.15f, 0.35f),
-    Limits(0.18f, 0.40f),
-    Limits(0.25f, 0.55f)
+    Limits(11, 4),
+    Limits(12, 5),
+    Limits(13, ALWAYS),
+    UNUSED,
+    UNUSED,
+    Limits(12, 7)
 )
 
 private val oneRaise = arrayOf(
-    Limits(0.15f, 0.40f),
-    Limits(0.10f, 0.30f),
-    Limits(0.12f, 0.45f),
-    Limits(0.08f, 0.18f),
-    Limits(0.08f, 0.18f),
-    Limits(0.10f, 0.28f)
+    Limits(14, 9),
+    Limits(18, 12),
+    Limits(15, 9),
+    UNUSED,
+    Limits(16, 13),
+    Limits(16, 11)
 )
 
 private val oneRaisePaid = arrayOf(
-    Limits(0.20f, 0.45f),
-    Limits(0.15f, 0.40f),
-    Limits(0.18f, 0.55f),
-    Limits(0.12f, 0.35f),
-    Limits(0.12f, 0.35f),
-    Limits(0.15f, 0.40f)
+    Limits(13, 9),
+    Limits(14, 9),
+    Limits(14, 7),
+    UNUSED,
+    Limits(15, 10),
+    Limits(14, 9)
 )
-
 private val manyRaise = arrayOf(
-    Limits(0.08f, 0.18f),
-    Limits(0.06f, 0.15f),
-    Limits(0.08f, 0.20f),
-    Limits(0.05f, 0.12f),
-    Limits(0.05f, 0.12f),
-    Limits(0.06f, 0.15f)
+    Limits(16, 13),
+    Limits(18, 14),
+    Limits(16, 13),
+    UNUSED,
+    UNUSED,
+    Limits(18, 14)
 )
 
 private val manyRaisePaid = arrayOf(
-    Limits(0.12f, 0.25f),
-    Limits(0.10f, 0.22f),
-    Limits(0.12f, 0.28f),
-    Limits(0.08f, 0.20f),
-    Limits(0.08f, 0.18f),
-    Limits(0.10f, 0.20f)
+    Limits(15, 12),
+    Limits(16, 13),
+    Limits(15, 12),
+    Limits(16, 13),
+    Limits(16, 14),
+    Limits(16, 13)
 )

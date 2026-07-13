@@ -30,5 +30,9 @@ abstract class HiltModule {
         @Singleton
         fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences =
             context.getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE)
+
+        @Provides
+        @Singleton
+        fun provideChenAnalyzer(): ChenAnalyzer = ChenAnalyzer()
     }
 }

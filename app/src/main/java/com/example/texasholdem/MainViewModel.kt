@@ -18,7 +18,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val localData: LocalDataRepository,
-    private val history: History
+    private val history: History,
+    private val chenAnalyzer: ChenAnalyzer
 ) : ViewModel() {
     private val savedState = loadSavedState()
 
@@ -36,7 +37,6 @@ class MainViewModel @Inject constructor(
     private var round = savedState.round
     private val tablePositions = arrayOfNulls<TablePosition?>(6)
     private val preCalculatedData = arrayOfNulls<PreCalculatedData?>(6)
-    private val chenAnalyzer = ChenAnalyzer()
 
     init {
         log(statistics.toString())
@@ -422,12 +422,15 @@ class MainViewModel @Inject constructor(
         requireNotNull(position)
 
         if (round == RoundType.PRE_FLOP) {
-            val handPercent = chenAnalyzer.calcHandPercent(player.cards)
-            val isPaid = player.lastBet.paid > 0
-            val strategy = selectPreFlopStrategy(handPercent, position, numOfRaise, numOfCall, isPaid)
+            val handStrength = chenAnalyzer.calcHandStrength(player.cards)
+            val lastBet = player.lastBet
+            val isPaid = lastBet.paid > 0 &&
+                    lastBet !is ActionType.SmallBlind &&
+                    lastBet !is ActionType.BigBlind
+            val strategy = selectPreFlopStrategy(handStrength, position, numOfRaise, numOfCall, isPaid)
             val action = resolveAction(strategy, availableActions)
             statistics.registerEvent(
-                handPercent,
+                handStrength,
                 position,
                 numOfRaise,
                 numOfCall,
@@ -465,11 +468,11 @@ class MainViewModel @Inject constructor(
 
     private fun loadSavedState(): SavedState =
         try {
-            restoreSnapshot(localData, history)
+            restoreSnapshot(localData, history, chenAnalyzer.values)
         } catch(_: Exception) {
             log("Local data is broken. Game was restarted")
             localData.resetGame()
-            restoreSnapshot(localData, history)
+            restoreSnapshot(localData, history, chenAnalyzer.values)
         }
 
     private fun log(mess: String) = Log.e("GamePlay", mess)

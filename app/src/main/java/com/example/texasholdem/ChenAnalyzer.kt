@@ -5,10 +5,11 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 
+typealias ChenStrength = Int
+
 class ChenAnalyzer {
     private val strength = Array(13) { IntArray(13) }
-    private val flatStrength: List<Int>
-    private val values: List<Int>
+    val values: List<ChenStrength>
 
     init {
         for (high in CardRank.TWO.ordinal ..CardRank.ACE.ordinal) {
@@ -18,26 +19,16 @@ class ChenAnalyzer {
                 strength[high][low] = s
             }
         }
-        flatStrength = strength.flatMap { it.toList() }.sortedDescending()
         values = strength.flatMap { it.toList() }.sorted().distinct()
+        require(values.size == 27)
     }
 
-    fun calcHandStrength(pocket: List<Card>): Int {
+    fun calcHandStrength(pocket: List<Card>): ChenStrength {
         require(pocket.size == 2)
         val (c1, c2) = pocket
         val high = max(c1.rank.ordinal, c2.rank.ordinal)
         val low =  min(c1.rank.ordinal, c2.rank.ordinal)
         return if (c1.suit == c2.suit) strength[low][high] else strength[high][low]
-    }
-
-    fun calcHandPercent(pocket: List<Card>): Float {
-        require(pocket.size == 2)
-        val (c1, c2) = pocket
-        val high = max(c1.rank.ordinal, c2.rank.ordinal)
-        val low =  min(c1.rank.ordinal, c2.rank.ordinal)
-        val rating = if (c1.suit == c2.suit) strength[low][high] else strength[high][low]
-        val count = flatStrength.indexOfFirst { it <= rating }
-        return if (count < 0) 1f else count.toFloat() / 169f
     }
 
     private fun chenStrength(high: Int, low: Int): Float {

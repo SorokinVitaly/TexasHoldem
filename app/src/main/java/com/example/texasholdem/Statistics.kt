@@ -1,6 +1,5 @@
 package com.example.texasholdem
 
-
 class Statistics(val chenValues: List<ChenStrength>) {
     private val tables = Array(7) { TableStatistics() }
     private val positions = Array(6) { PositionStatistics() }
@@ -16,16 +15,7 @@ class Statistics(val chenValues: List<ChenStrength>) {
         action: ActionType,
         strategy: BettingStrategy,
     ) {
-        val tableIndex = when {
-            numOfRaise == 0 && numOfCall == 0 -> 0
-            numOfRaise == 0 && numOfCall == 1 -> 1
-            numOfRaise == 0 && numOfCall >= 2 -> 2
-            numOfRaise == 1 && !isPaid -> 3
-            numOfRaise == 1 && isPaid -> 4
-            numOfRaise >= 2 && !isPaid -> 5
-            numOfRaise >= 2 && isPaid -> 6
-            else -> throw IllegalStateException("Wrong condition")
-        }
+        val tableIndex = calcTableIndex(numOfRaise, numOfCall, isPaid)
         val bucketIndex = bucketIndex(handStrength)
         val positionIndex = position.ordinal
 

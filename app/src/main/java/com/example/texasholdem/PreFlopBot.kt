@@ -6,6 +6,21 @@ data class Limits(val limitAggressive: ChenStrength, val limitPassive: ChenStren
     }
 }
 
+fun calcTableIndex(
+    numOfRaise: Int,
+    numOfCall: Int,
+    isPaid: Boolean
+) = when {
+    numOfRaise == 0 && numOfCall == 0 -> 0
+    numOfRaise == 0 && numOfCall == 1 -> 1
+    numOfRaise == 0 && numOfCall >= 2 -> 2
+    numOfRaise == 1 && !isPaid -> 3
+    numOfRaise == 1 && isPaid -> 4
+    numOfRaise >= 2 && !isPaid -> 5
+    numOfRaise >= 2 && isPaid -> 6
+    else -> throw IllegalStateException("Wrong table index condition")
+}
+
 fun selectPreFlopStrategy(
     handStrength: ChenStrength,
     position: TablePosition,
@@ -13,18 +28,11 @@ fun selectPreFlopStrategy(
     numOfCall: Int,
     isPaid: Boolean
 ): BettingStrategy {
-    val map = when {
-        numOfRaise == 0 && numOfCall == 0 -> openRaise
-        numOfRaise == 0 && numOfCall == 1 -> oneLimper
-        numOfRaise == 0 && numOfCall >= 2 -> manyLimper
-        numOfRaise == 1 && !isPaid -> oneRaise
-        numOfRaise == 1 && isPaid -> oneRaisePaid
-        numOfRaise >= 2 && !isPaid -> manyRaise
-        numOfRaise >= 2 && isPaid -> manyRaisePaid
-        else -> throw IllegalStateException("Wrong condition")
-    }
-    val limits = map[position.ordinal]
+    val tableIndex = calcTableIndex(numOfRaise, numOfCall, isPaid)
+    val table = tables[tableIndex]
+    val limits = table[position.ordinal]
     return when {
+        limits == UNUSED -> throw IllegalStateException("UNUSED Limits: ${position.name}, tableIndex = $tableIndex")
         handStrength >= limits.limitAggressive -> BettingStrategy.AGGRESSIVE
         handStrength >= limits.limitPassive -> BettingStrategy.PASSIVE
         else -> BettingStrategy.DROP
@@ -103,4 +111,14 @@ private val manyRaisePaid = arrayOf(
     Limits(16, 13),
     Limits(16, 14),
     Limits(16, 13)
+)
+
+private val tables = arrayOf(
+    openRaise,
+    oneLimper,
+    manyLimper,
+    oneRaise,
+    oneRaisePaid,
+    manyRaise,
+    manyRaisePaid
 )

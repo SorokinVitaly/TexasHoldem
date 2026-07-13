@@ -39,7 +39,6 @@ class MainViewModel @Inject constructor(
     private val preCalculatedData = arrayOfNulls<PreCalculatedData?>(6)
 
     init {
-        log(statistics.toString())
         if (localData.isGameStarted &&
             state.value.players.all { it.cards.size == 2 || !it.isActive }
         ) {

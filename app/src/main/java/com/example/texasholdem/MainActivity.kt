@@ -82,8 +82,16 @@ class MainActivity : ComponentActivity() {
                         communityCards = state.communityCards,
                         modifier = Modifier.constrainAs(createRef()) { centerTo(parent) }
                     )
-                    val orientation = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
                     val refs = state.players.indices.map { createRef() }
+                    val portrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+                    if (portrait) {
+                        createVerticalChain(refs[2], refs[1])
+                        createVerticalChain(refs[4], refs[5])
+                    } else {
+                        createHorizontalChain(refs[1], refs[0])
+                        createHorizontalChain(refs[3], refs[4])
+                    }
+
                     state.players.forEachIndexed { index, player ->
                         val isCardsOpen = when {
                             index == 0 -> true
@@ -95,7 +103,7 @@ class MainActivity : ComponentActivity() {
                             isCardsOpen = isCardsOpen,
                             modifier = Modifier.constrainAs(
                                 refs[index],
-                                playerConstraint(index, orientation, refs)
+                                playerConstraint(index, portrait)
                             )
                         )
                     }

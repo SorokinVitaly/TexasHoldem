@@ -15,7 +15,7 @@ data class ScreenState(
     val isCardsOpen: Boolean
 ) {
     init {
-        if (players.size != 6) {
+        if (players.size != PLAYERS_NUMBER) {
             throw IllegalStateException("Wrong number of players")
         }
     }

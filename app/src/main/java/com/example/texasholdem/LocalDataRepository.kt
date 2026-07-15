@@ -211,7 +211,7 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
     )
     override var dealerIndex: Int by PreferencesDelegate(
         ::dealerIndex.name,
-        Random.nextInt(6)
+        Random.nextInt(PLAYERS_NUMBER)
     )
     override var isGameStarted: Boolean by PreferencesDelegate(
         ::isGameStarted.name,
@@ -275,7 +275,7 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
         deck = ""
         communityCards= ""
         bankChips = 0
-        dealerIndex = Random.nextInt(6)
+        dealerIndex = Random.nextInt(PLAYERS_NUMBER)
         isGameStarted = false
         isResetAvailable = false
         currentBet = 0

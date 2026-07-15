@@ -35,8 +35,8 @@ class MainViewModel @Inject constructor(
     private var numOfCall = savedState.numOfCall
     private var playerIndex = savedState.playerIndex
     private var round = savedState.round
-    private val tablePositions = arrayOfNulls<TablePosition?>(6)
-    private val preCalculatedData = arrayOfNulls<PreCalculatedData?>(6)
+    private val tablePositions = arrayOfNulls<TablePosition?>(PLAYERS_NUMBER)
+    private val preCalculatedData = arrayOfNulls<PreCalculatedData?>(PLAYERS_NUMBER)
 
     init {
         if (localData.isGameStarted &&
@@ -266,7 +266,7 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun forEachActivePlayer(action: suspend PlayerData.(Int) -> Unit) {
-        repeat(6) { index ->
+        repeat(PLAYERS_NUMBER) { index ->
             player(index).apply {
                 if (isActive) {
                     action(index)
@@ -276,6 +276,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun calculatePositions() {
+        // Positions are calculated only for 6 players table
         val availablePositions = TablePosition.entries.toMutableList()
         val numPlayers = state.value.players.count { it.isActive }
         if (numPlayers < 6) {
@@ -353,14 +354,14 @@ class MainViewModel @Inject constructor(
     }
 
     private fun nextPlayerIndex(index: Int, predicate: PlayerData.() -> Boolean): Int {
-        val first = (index + 1) % 6
+        val first = (index + 1) % PLAYERS_NUMBER
         var current = first
 
         while (true) {
             if (player(current).predicate()) {
                 return current
             }
-            current = (current + 1) % 6
+            current = (current + 1) % PLAYERS_NUMBER
             if (current == first) {
                 throw IllegalStateException("Next player not found")
             }

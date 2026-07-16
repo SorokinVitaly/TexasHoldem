@@ -9,7 +9,6 @@ Bet/Raise Size
 
 Note:
 - Chips in the game are not associated with real money. This game is not gambling; it is for entertainment only.
-- Closing the app during a game resets your previous progress. Chip balances are saved when the player sees the "DIAL NEXT" button.
 
 Texas Holdem Poker built with Kotlin and Jetpack Compose.
 

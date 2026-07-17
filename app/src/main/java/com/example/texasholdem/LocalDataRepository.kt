@@ -286,12 +286,12 @@ class LocalDataRepositoryImpl @Inject constructor(override val prefs: SharedPref
     }
 
     companion object {
-        const val DEFAULT_PLAYER_0_NAME = "Me"
-        const val DEFAULT_PLAYER_1_NAME = "Lesley Colon"
-        const val DEFAULT_PLAYER_2_NAME = "Leon Kim"
-        const val DEFAULT_PLAYER_3_NAME = "Vanessa May"
-        const val DEFAULT_PLAYER_4_NAME = "Omer Griffin"
-        const val DEFAULT_PLAYER_5_NAME = "Yolanda Young"
+        const val DEFAULT_PLAYER_0_NAME = "Player"
+        const val DEFAULT_PLAYER_1_NAME = "Lesley"
+        const val DEFAULT_PLAYER_2_NAME = "Leon"
+        const val DEFAULT_PLAYER_3_NAME = "Vanessa"
+        const val DEFAULT_PLAYER_4_NAME = "Omer"
+        const val DEFAULT_PLAYER_5_NAME = "Yolanda"
         const val DEFAULT_CHIP_NUMBER = 1000
     }
 }

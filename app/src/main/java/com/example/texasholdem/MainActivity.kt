@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -11,11 +12,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -41,7 +42,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        val statusBarBackground = ContextCompat.getColor(this, R.color.backGround)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                statusBarBackground,
+                statusBarBackground
+            ),
+            navigationBarStyle = SystemBarStyle.dark(
+                statusBarBackground
+            )
+        )
         setContent {
             val state by viewModel.state.collectAsStateWithLifecycle()
             MainScreen(state)
@@ -68,8 +78,7 @@ class MainActivity : ComponentActivity() {
         Surface(
             color = colorResource(R.color.backGround),
             modifier = Modifier
-                .navigationBarsPadding()
-                .windowInsetsPadding(WindowInsets.displayCutout)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .fillMaxSize()
         ) {
             Column(

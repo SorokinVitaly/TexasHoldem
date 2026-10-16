@@ -79,12 +79,12 @@ private val manyLimper = arrayOf(
 )
 
 private val oneRaise = arrayOf(
-    Limits(14, 9),
-    Limits(18, 12),
-    Limits(15, 9),
+    Limits(14, 8),
+    Limits(18, 9),
+    Limits(15, 6),
     UNUSED,
-    Limits(16, 13),
-    Limits(16, 11)
+    Limits(16, 12),
+    Limits(16, 10)
 )
 
 private val oneRaisePaid = arrayOf(

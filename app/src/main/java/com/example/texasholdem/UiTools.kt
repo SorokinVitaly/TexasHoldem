@@ -97,12 +97,16 @@ fun Cards(cards: List<Card>, isCardsOpen: Boolean) =
 
 @Composable
 fun Card(card: Card, isCardsOpen: Boolean) {
-    val assetName = if (isCardsOpen) card.faceAssetName else card.backAssetName
+    val (assetName, borderStroke) = if (!isCardsOpen) card.backAssetName to null
+    else card.faceAssetName to BorderStroke(width = 1.dp, color = Color.Black)
+
     Card(
-        border = BorderStroke(width = 1.dp, color = Color.Black),
+        border = borderStroke,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(4.dp),
-        modifier = Modifier.height(cardHeight).width(cardWidth)
+        modifier = Modifier
+            .height(cardHeight)
+            .width(cardWidth)
     ) {
         val imageLoader = (LocalContext.current.applicationContext as MainApp).imageLoader
         AsyncImage(

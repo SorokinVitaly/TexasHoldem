@@ -43,10 +43,6 @@ fun Player(
     isCardsOpen: Boolean,
     modifier: Modifier = Modifier
 ) {
-    if (!playerData.isActive) {
-        return
-    }
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -57,7 +53,14 @@ fun Player(
             color = Color.White
         )
 
-        Cards(playerData.cards, isCardsOpen)
+        if (playerData.isActive) {
+            Cards(playerData.cards, isCardsOpen)
+        } else {
+            Spacer(modifier = Modifier
+                .height(cardHeight)
+                .width(cardWidth)
+            )
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (playerData.isDealer) {
